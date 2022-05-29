@@ -1,0 +1,31 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "newLine": "lf",
+        "target": "ES5",
+        "forceConsistentCasingInFileNames": true,
+        "outDir": "dist",
+        "strictBindCallApply": true,
+        "strictFunctionTypes": true,
+        "strictNullChecks": true,
+        "alwaysStrict": true,
+        "sourceMap": true,
+        "module": "CommonJS",
+        "declaration": true,
+        "declarationDir": "types",
+        "lib": [
+            "DOM",
+            "ES2017"
+        ]
+    },
+    "include": [
+        "src/**/*",
+        "env/**/*",
+        "lib/**/*"
+    ]
+}
