@@ -1,3 +1,4 @@
+// 로그인시 알아서 서버와 동기화하고 로그아웃시 로컬에 데이터를 안전하게 저장하는 저장소
 const api = new mw.Api();
 const STORAGE = Symbol('storage');
 const NAMESPACE = Symbol('namespace');
@@ -17,10 +18,10 @@ const { saveOption, saveOptions } = (() => {
     let deferred = $.Deferred();
     let timeout: number | null = null;
 
-    function saveOption(key: string, value: string|null) {
+    function saveOption(key: string, value: string | null) {
         return saveOptions({ [key]: value });
     }
-    function saveOptions(options: { [key: string]: string|null }) {
+    function saveOptions(options: { [key: string]: string | null }) {
         if (timeout) clearTimeout(timeout);
         timeout = setTimeout(() => {
             api.saveOptions(options).then(deferred.resolve, deferred.reject);
@@ -114,7 +115,8 @@ class LocalStorage extends SyncableStorage {
         super();
 
         if (keyEncoder) {
-            if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and decoder must be included');
+            if (!keyEncoder.encoder || !keyEncoder.decoder)
+                throw new TypeError('Encoder and decoder must be included');
 
             this.encodeKey = keyEncoder.encoder;
             this.decodeKey = keyEncoder.decoder;
@@ -135,13 +137,13 @@ class LocalStorage extends SyncableStorage {
                 value:
                     (parent ? parent[NAMESPACE] : '') +
                     (keyEncoder && keyEncoder.encodeNamespace ? '' : namespace),
-                ...propOptions
+                ...propOptions,
             },
             [NAMESPACEE]: {
                 value:
                     (parent ? parent[NAMESPACEE] : '') +
                     (keyEncoder && keyEncoder.encodeNamespace ? namespace : ''),
-                ...propOptions
+                ...propOptions,
             },
         });
     }
@@ -277,14 +279,16 @@ class LocalStorage extends SyncableStorage {
                 "Failed to execute 'subset' on 'LocalStorage': 1 argument required, but only 0 present."
             );
         if (!keyEncoder && this[NAMESPACEE]) {
-            keyEncoder = {//@ts-ignore
-                encoder: this.encodeKey,//@ts-ignore
+            keyEncoder = {
+                //@ts-ignore
+                encoder: this.encodeKey, //@ts-ignore
                 decoder: this.decodeKey,
                 encodeNamespace: true,
                 preEncodable: this[PRE_ENCODED],
             };
         }
-        if (keyEncoder && (!keyEncoder.encoder || !keyEncoder.decoder)) throw new TypeError('Encoder and decoder must be included');
+        if (keyEncoder && (!keyEncoder.encoder || !keyEncoder.decoder))
+            throw new TypeError('Encoder and decoder must be included');
 
         return new LocalStorage(this, namespace, keyEncoder);
     }
@@ -294,7 +298,8 @@ class LocalStorage extends SyncableStorage {
             throw new TypeError(
                 "Failed to execute 'copy' on 'LocalStorage': 1 argument required, but only 0 present."
             );
-        if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and decoder must be included');
+        if (!keyEncoder.encoder || !keyEncoder.decoder)
+            throw new TypeError('Encoder and decoder must be included');
 
         keyEncoder.encodeNamespace = false;
 
@@ -320,7 +325,8 @@ class CloudStorage extends SyncableStorage {
         super();
 
         if (keyEncoder) {
-if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and decoder must be included');
+            if (!keyEncoder.encoder || !keyEncoder.decoder)
+                throw new TypeError('Encoder and decoder must be included');
 
             this.encodeKey = keyEncoder.encoder;
             this.decodeKey = keyEncoder.decoder;
@@ -340,13 +346,13 @@ if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and
                 value:
                     (parent ? parent[NAMESPACE] : 'userjs-') +
                     (keyEncoder ? '' : namespace),
-                ...propOptions
+                ...propOptions,
             },
             [NAMESPACEE]: {
                 value:
                     (parent ? parent[NAMESPACEE] : '') +
                     (keyEncoder ? namespace : ''),
-                ...propOptions
+                ...propOptions,
             },
         });
     }
@@ -355,7 +361,7 @@ if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and
         if (this.isRoot) throw new TypeError('Root storage cannot be cleared');
 
         const options: {
-            [key: string]: string|null
+            [key: string]: string | null;
         } = {};
 
         for (const key in this[STORAGE].values) {
@@ -379,7 +385,7 @@ if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and
                 "Failed to execute 'deleteAll' on 'CloudStorage': 1 argument required, but only 0 present."
             );
 
-        const options: { [key: string]: string|null } = {};
+        const options: { [key: string]: string | null } = {};
 
         for (const key of keys) options[this[ENCODE_KEY](key)] = null;
 
@@ -507,14 +513,16 @@ if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and
 
     subset(namespace: string, keyEncoder?: KeyEncoder): CloudStorage {
         if (!keyEncoder && this[NAMESPACEE]) {
-            keyEncoder = {//@ts-ignore
-                encoder: this.encodeKey,//@ts-ignore
+            keyEncoder = {
+                //@ts-ignore
+                encoder: this.encodeKey, //@ts-ignore
                 decoder: this.decodeKey,
                 encodeNamespace: true,
                 preEncodable: this[PRE_ENCODED],
             };
         }
-        if (keyEncoder && (!keyEncoder.encoder || !keyEncoder.decoder)) throw new TypeError('Encoder and decoder must be included');
+        if (keyEncoder && (!keyEncoder.encoder || !keyEncoder.decoder))
+            throw new TypeError('Encoder and decoder must be included');
         return new CloudStorage(this, namespace, keyEncoder);
     }
 
@@ -523,7 +531,8 @@ if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and
             throw new TypeError(
                 "Failed to execute 'copy' on 'CloudStorage': 1 argument required, but only 0 present."
             );
-        if (!keyEncoder.encoder || !keyEncoder.decoder) throw new TypeError('Encoder and decoder must be included');
+        if (!keyEncoder.encoder || !keyEncoder.decoder)
+            throw new TypeError('Encoder and decoder must be included');
 
         keyEncoder.encodeNamespace = false;
 

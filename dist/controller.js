@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+// 위키 문법을 통해 DB2 저장소 제어
 var storage_1 = require("./storage");
 var common_js_1 = require("./common.js");
 var CGI2Parser = require("ext.gadget.CGI2-parser");
@@ -20,7 +21,6 @@ function enableDB2() {
         : geturlSearch();
     var currentTitle = (useCGIProtect && currentSearch && currentSearch.title) ||
         mw.config.get('wgPageName');
-    var currentUrl = mw.util.getUrl(currentTitle, currentSearch);
     var handleError = notifyApiError.bind(null, '데이터 저장에 실패하였습니다.', {
         tag: 'gameDB',
         additionalMessage: '(<a href="##emergency-save">로컬에 임시 저장</a>)',
@@ -310,7 +310,8 @@ function enableDB2() {
         return instant.save().then(function () {
             var url = mw.util.getUrl(instant.params.title || currentTitle, instant.params) + location.hash;
             instantDone = true;
-            if (currentUrl !== url && instant.paramChanged)
+            if ((instant.params.title && instant.params.title !== currentTitle) ||
+                instant.paramChanged)
                 location.href = url;
             else if (noti)
                 noti.close();
@@ -324,10 +325,10 @@ function enableDB2() {
                 change.control(this);
             });
             var href;
+            var url = mw.util.getUrl(change.params.title || currentTitle, change.params) +
+                (link.href && new URL(link.href).hash);
             if (link.href)
                 href = new URL(link.href);
-            var url = mw.util.getUrl(change.params.title || currentTitle, change.params) +
-                new URL(link.href).hash;
             if (change.paramChanged)
                 link.href = url;
             else if (href &&

@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.rootGameDB = exports.getLocalNamespace = exports.decode = exports.encode = void 0;
-var hybridStorage = require("./hybridStorage");
+// common.ts, controller.ts에서 공용으로 사용
+var hybridStorage = require("hybridStorage");
 /* option key 인코딩
     url인코딩
     % = _

@@ -1,3 +1,4 @@
+// 미디어위키에서 기본적으로 제공하는 mw 네임스페이스
 declare namespace mw {
     class Map<Value> {
         values: { [key: string]: Value };

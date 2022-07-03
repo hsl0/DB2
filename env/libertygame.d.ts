@@ -1,3 +1,4 @@
+// 리버티게임에서 window 네임스페이스에 지정된 함수들
 /// <reference path='mw.d.ts' />
 
 // Common.js

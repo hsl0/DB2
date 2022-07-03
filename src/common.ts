@@ -1,4 +1,5 @@
-import hybridStorage = require('../lib/hybridStorage/src/hybridStorage');
+// common.ts, controller.ts에서 공용으로 사용
+import hybridStorage = require('hybridStorage');
 export type SyncableStorage = typeof hybridStorage;
 /* option key 인코딩
     url인코딩

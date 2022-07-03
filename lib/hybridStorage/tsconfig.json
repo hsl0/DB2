@@ -9,7 +9,7 @@
         "newLine": "lf",
         "target": "ES5",
         "forceConsistentCasingInFileNames": true,
-        "outDir": "dist",
+        "outDir": ".",
         "strictBindCallApply": true,
         "strictFunctionTypes": true,
         "strictNullChecks": true,
@@ -17,21 +17,13 @@
         "sourceMap": true,
         "module": "CommonJS",
         "declaration": true,
-        "declarationDir": "types",
         "lib": [
             "DOM",
             "ES2017"
         ],
-        "composite": true,
-        "rootDir": "src"
+        "composite": true
     },
-    "include": [
-        "src/**/*",
-        "env/**/*"
-    ],
-    "references": [
-        {
-            "path": "lib/hybridStorage"
-        }
+    "files": [
+        "hybridStorage.ts"
     ]
 }

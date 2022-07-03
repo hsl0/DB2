@@ -1,0 +1,24 @@
+{
+  "name": "hybridstorage",
+  "version": "2.0.0-alpha.0",
+  "description": "로그인시 알아서 서버와 동기화하고 로그아웃시 로컬에 데이터를 안전하게 저장하는 저장소",
+  "main": "hybridStorage.js",
+  "types": "hybridStorage.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "author": "hsl0",
+  "license": "CC-BY-NC-SA-4.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hsl0/libertygame-DB2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hsl0/libertygame-DB2/issues"
+  },
+  "homepage": "https://github.com/hsl0/libertygame-DB2#readme",
+  "devDependencies": {
+    "@types/libertygame-env": "^1.0.0"
+  }
+}
