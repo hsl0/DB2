@@ -1,22 +1,17 @@
 {
     "compilerOptions": {
         "strict": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
         "noImplicitThis": true,
         "newLine": "lf",
         "target": "ES5",
         "forceConsistentCasingInFileNames": true,
-        "outDir": ".",
-        "strictBindCallApply": true,
+        "noEmit": true,
         "strictFunctionTypes": true,
         "strictNullChecks": true,
         "alwaysStrict": true,
-        "sourceMap": true,
         "module": "CommonJS",
-        "declaration": true,
         "lib": [
             "DOM",
             "ES2017"
@@ -24,14 +19,12 @@
         "composite": true
     },
     "include": [
-        "../../env"
-    ],
-    "files": [
-        "hybridStorage.ts"
+        "**/*",
+        "../node_modules/types-mediawiki" // import types-mediawiki
     ],
     "references": [
         {
-            "path": "../../env"
+            "path": "lib/hybridStorage"
         }
     ]
 }

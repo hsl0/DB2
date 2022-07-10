@@ -1,15 +1,19 @@
 // 리버티게임에서 window 네임스페이스에 지정된 함수들
-/// <reference path='mw.d.ts' />
 
 // Common.js
-interface NotificationOptions extends mw.notification.Options {
+interface NotificationOptions extends Partial<typeof mw.notification.defaults> {
     additionalMessage: string;
+}
+interface MWApiHTTPErrorDetails {
+    xhr: JQueryXHR;
+    textStatus: string;
+    exception: string;
 }
 declare function notifyApiError(
     msg: string,
     option: NotificationOptions | null,
     code: string,
-    object?: mw.Api.HTTPErrorDetails
+    object?: MWApiHTTPErrorDetails
 ): void;
 
 declare function geturlSearch(location?: URL | Location): {

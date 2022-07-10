@@ -9,6 +9,13 @@ import {
 } from './common.js';
 
 import CGI2Parser = require('ext.gadget.CGI2-parser');
+
+type MWNotification = {
+    pause: () => void;
+    resume: () => void;
+    close: () => void;
+};
+
 function enableDB2() {
     function parseJSON(json: string): any {
         try {
@@ -23,7 +30,7 @@ function enableDB2() {
     const currentSearch = useCGIProtect
         ? //@ts-ignore
           (parseJSON(sessionStorage.getItem('protectCGI')) as
-              | { [key: string]: string }
+              | Record<string, string>
               | undefined)
         : geturlSearch();
     const currentTitle =
@@ -38,13 +45,13 @@ function enableDB2() {
         : localStorage.getItem(
               ('gamedb-temp-' + mw.config.get('wgUserName')) as string
           );
-    let noti: mw.Notification;
+    let noti: MWNotification;
     let instantDone = false;
 
     if (useCGIProtect) {
         if (currentSearch) delete currentSearch.title;
         else return;
-    } else delete (currentSearch as { [key: string]: string }).title;
+    } else delete (currentSearch as Record<string, string>).title;
 
     if (currentSearch?.action) {
         $('.gameDB-container').removeClass('gameDB-container');
@@ -64,6 +71,7 @@ function enableDB2() {
                     {
                         autoHide: false,
                         tag: 'gameDB',
+                        //@ts-ignore
                         type: 'pending',
                     }
                 );
@@ -93,9 +101,9 @@ function enableDB2() {
             }
 
             const change: {
-                local: { [key: string]: string };
-                global: { [key: string]: string };
-                root: { [key: string]: string };
+                local: Record<string, string>;
+                global: Record<string, string>;
+                root: Record<string, string>;
                 deleteLocal: string[];
                 deleteGlobal: string[];
                 deleteRoot: string[];
@@ -108,10 +116,10 @@ function enableDB2() {
         });
 
     class DataChange {
-        params: { [key: string]: string };
-        local: { [key: string]: string } = {};
-        global: { [key: string]: string } = {};
-        root: { [key: string]: string } = {};
+        params: Record<string, string>;
+        local: Record<string, string> = {};
+        global: Record<string, string> = {};
+        root: Record<string, string> = {};
         deleteLocal: string[] = [];
         deleteGlobal: string[] = [];
         deleteRoot: string[] = [];
@@ -122,11 +130,11 @@ function enableDB2() {
             this.params = geturlSearch(new URL(href, location as unknown as URL));
         }
         control(element: HTMLElement) {
-            let base: { [key: string]: string | null },
+            let base: Record<string, string | null>,
                 delBase: string[],
                 key: string,
                 storage: SyncableStorage,
-                params: { [key: string]: string },
+                params: Record<string, string>,
                 val: string | null | undefined,
                 paramChanged: boolean;
             const data = element.dataset;
@@ -237,11 +245,11 @@ function enableDB2() {
                     paramChanged = false;
                     params = this.params;
                     val = JSON.stringify(
-                        new CGI2Parser<{ [key: string]: string }>({
+                        new CGI2Parser<Record<string, string>>({
                             get(args) {
                                 if (typeof args === 'object')
                                     Object.entries(
-                                        args as { [key: string]: unknown }
+                                        args as Record<string, unknown>
                                     ).forEach(([key, value]) => {
                                         if (typeof value !== 'string')
                                             throw new TypeError(
@@ -272,7 +280,7 @@ function enableDB2() {
                                         `'set' 동작의 유효한 인자 형식은 Object 이지만, ${typeof args} 형식의 ${args}가 입력되었습니다`
                                     );
                                 Object.entries(
-                                    args as { [key: string]: unknown }
+                                    args as Record<string, unknown>
                                 ).forEach(([key, value]) => {
                                     if (
                                         typeof key !== 'string' ||
@@ -295,7 +303,7 @@ function enableDB2() {
                                         `'def' 동작의 유효한 인자 형식은 Object 이지만, ${typeof args} 형식의 ${args}가 입력되었습니다`
                                     );
                                 Object.entries(
-                                    args as { [key: string]: unknown }
+                                    args as Record<string, unknown>
                                 ).forEach(([key, value]) => {
                                     if (typeof value !== 'string')
                                         throw new TypeError(
@@ -307,7 +315,7 @@ function enableDB2() {
                             sav(args) {
                                 if (typeof args === 'object')
                                     Object.entries(
-                                        args as { [key: string]: unknown }
+                                        args as Record<string, unknown>
                                     ).forEach(([key, value]) => {
                                         if (typeof value !== 'string')
                                             throw new TypeError(
@@ -384,6 +392,7 @@ function enableDB2() {
                             {
                                 autoHide: false,
                                 tag: 'gameDB',
+                                //@ts-ignore
                                 type: 'pending',
                             }
                         );

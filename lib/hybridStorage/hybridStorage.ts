@@ -21,10 +21,10 @@ const { saveOption, saveOptions } = (() => {
     function saveOption(key: string, value: string | null) {
         return saveOptions({ [key]: value });
     }
-    function saveOptions(options: { [key: string]: string | null }) {
+    function saveOptions(options: Record<string, string | null>) {
         if (timeout) clearTimeout(timeout);
         timeout = setTimeout(() => {
-            api.saveOptions(options).then(deferred.resolve, deferred.reject);
+            api.saveOptions(options as any).then(deferred.resolve, deferred.reject);
 
             timeout = null;
             deferred = $.Deferred();
@@ -67,10 +67,10 @@ abstract class SyncableStorage {
     abstract has(key: string): boolean;
     abstract hasAll(keysArr?: string[], ...keysArg: string[]): boolean;
     abstract set(key: string, value: string): PromiseLike<any>;
-    abstract setAll(entries: { [key: string]: string }): PromiseLike<any>;
+    abstract setAll(entries: Record<string, string>): PromiseLike<any>;
     abstract refresh(): PromiseLike<any>;
     abstract keys(): string[];
-    abstract values(): { [key: string]: string };
+    abstract values(): Record<string, string>;
     abstract subset(namespace: string, keyEncoder?: KeyEncoder): SyncableStorage;
     abstract copy(keyEncoder: KeyEncoder): SyncableStorage;
 
@@ -237,7 +237,7 @@ class LocalStorage extends SyncableStorage {
         );
     }
 
-    setAll(entries: { [key: string]: string }) {
+    setAll(entries: Record<string, string>) {
         if (entries) {
             for (const key in entries)
                 this[STORAGE].setItem(this[ENCODE_KEY](key), entries[key]);
@@ -263,7 +263,7 @@ class LocalStorage extends SyncableStorage {
     }
 
     values() {
-        const values: { [key: string]: string } = {};
+        const values: Record<string, string> = {};
 
         for (const key in this[STORAGE]) {
             if (this[IS_MY_KEY](key))
@@ -280,9 +280,8 @@ class LocalStorage extends SyncableStorage {
             );
         if (!keyEncoder && this[NAMESPACEE]) {
             keyEncoder = {
-                //@ts-ignore
-                encoder: this.encodeKey, //@ts-ignore
-                decoder: this.decodeKey,
+                encoder: this.encodeKey as any,
+                decoder: this.decodeKey as any,
                 encodeNamespace: true,
                 preEncodable: this[PRE_ENCODED],
             };
@@ -364,6 +363,7 @@ class CloudStorage extends SyncableStorage {
             [key: string]: string | null;
         } = {};
 
+        //@ts-ignore Access private anyway
         for (const key in this[STORAGE].values) {
             if (this[IS_MY_KEY](key)) options[key] = null;
         }
@@ -385,7 +385,7 @@ class CloudStorage extends SyncableStorage {
                 "Failed to execute 'deleteAll' on 'CloudStorage': 1 argument required, but only 0 present."
             );
 
-        const options: { [key: string]: string | null } = {};
+        const options: Record<string, string | null> = {};
 
         for (const key of keys) options[this[ENCODE_KEY](key)] = null;
 
@@ -396,10 +396,12 @@ class CloudStorage extends SyncableStorage {
         callbackfn: (value: string, key: string, map: this) => unknown,
         thisArg?: unknown
     ) {
+        // @ts-ignore
         for (const key in this[STORAGE].values) {
             if (this[IS_MY_KEY](key))
                 callbackfn.call(
                     thisArg,
+                    // @ts-ignore
                     this[STORAGE].values[key],
                     this[DECODE_KEY](key),
                     this
@@ -431,6 +433,7 @@ class CloudStorage extends SyncableStorage {
         let missing = false;
 
         for (const key of keys) {
+            //@ts-ignore Access private anyway
             if (!(this[ENCODE_KEY](key) in this[STORAGE].values)) {
                 missing = true;
                 break;
@@ -447,9 +450,9 @@ class CloudStorage extends SyncableStorage {
         );
     }
 
-    setAll(entries: { [key: string]: string }) {
+    setAll(entries: Record<string, string>) {
         if (entries) {
-            const options: { [key: string]: string } = {};
+            const options: Record<string, string> = {};
 
             for (const key in entries) options[this[ENCODE_KEY](key)] = entries[key];
 
@@ -478,6 +481,7 @@ class CloudStorage extends SyncableStorage {
                     }
                 )
                     .then((response) => {
+                        //@ts-ignore Access private anyway
                         mw.user.options.values = response.query.userinfo.options;
                         return this as CloudStorage;
                     })
@@ -493,6 +497,7 @@ class CloudStorage extends SyncableStorage {
     keys() {
         const keys: string[] = [];
 
+        //@ts-ignore Access private anyway
         for (const key in this[STORAGE].values) {
             if (this[IS_MY_KEY](key)) keys.push(this[DECODE_KEY](key));
         }
@@ -501,10 +506,12 @@ class CloudStorage extends SyncableStorage {
     }
 
     values() {
-        const values: { [key: string]: string } = {};
+        const values: Record<string, string> = {};
 
+        //@ts-ignore Access private anyway
         for (const key in this[STORAGE].values) {
             if (this[IS_MY_KEY](key))
+                //@ts-ignore Access private anyway
                 values[this[DECODE_KEY](key)] = this[STORAGE].values[key];
         }
 
@@ -514,9 +521,8 @@ class CloudStorage extends SyncableStorage {
     subset(namespace: string, keyEncoder?: KeyEncoder): CloudStorage {
         if (!keyEncoder && this[NAMESPACEE]) {
             keyEncoder = {
-                //@ts-ignore
-                encoder: this.encodeKey, //@ts-ignore
-                decoder: this.decodeKey,
+                encoder: this.encodeKey as any,
+                decoder: this.decodeKey as any,
                 encodeNamespace: true,
                 preEncodable: this[PRE_ENCODED],
             };
@@ -542,6 +548,7 @@ class CloudStorage extends SyncableStorage {
     get size() {
         let count = 0;
 
+        //@ts-ignore Access private anyway
         for (const key in this[STORAGE].values) {
             if (this[IS_MY_KEY](key)) count++;
         }

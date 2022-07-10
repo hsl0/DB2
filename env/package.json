@@ -4,7 +4,9 @@
   "description": "리버티게임(libertygame.miraheze.org) 환경 (타입스크립트 타입 등)",
   "type": "module",
   "types": "index.d.ts",
-  "devDependencies": {},
+  "devDependencies": {
+    "types-mediawiki": "^1.2.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
