@@ -1,5 +1,5 @@
 // 위키 문법을 통해 DB2 저장소 제어
-import { localGameDB, globalGameDB } from './storage';
+import { localGameDB, globalGameDB } from './storage.js';
 import {
     rootGameDB as _rootGameDB,
     encode,

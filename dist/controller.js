@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 // 위키 문법을 통해 DB2 저장소 제어
-var storage_1 = require("./storage");
+var storage_js_1 = require("./storage.js");
 var common_js_1 = require("./common.js");
 var CGI2Parser = require("ext.gadget.CGI2-parser");
 function enableDB2() {
@@ -95,13 +95,13 @@ function enableDB2() {
                 throw new TypeError('전역키와 일반키가 동시에 지정되었습니다');
             }
             else if ('local' in data) {
-                storage = storage_1.localGameDB;
+                storage = storage_js_1.localGameDB;
                 base = this.local;
                 delBase = this.deleteLocal;
                 key = data.local;
             }
             else if ('global' in data) {
-                storage = storage_1.globalGameDB;
+                storage = storage_js_1.globalGameDB;
                 base = this.global;
                 delBase = this.deleteGlobal;
                 key = data.global;
@@ -278,10 +278,10 @@ function enableDB2() {
                 promises.push(rootGameDB.delete(title));
             else if (title in this.root)
                 promises.push(rootGameDB.set(title, this.root[title]));
-            promises.push(storage_1.localGameDB.setAll(this.local));
-            promises.push(storage_1.localGameDB.deleteAll(this.deleteLocal));
-            promises.push(storage_1.globalGameDB.setAll(this.global));
-            promises.push(storage_1.globalGameDB.deleteAll(this.deleteGlobal));
+            promises.push(storage_js_1.localGameDB.setAll(this.local));
+            promises.push(storage_js_1.localGameDB.deleteAll(this.deleteLocal));
+            promises.push(storage_js_1.globalGameDB.setAll(this.global));
+            promises.push(storage_js_1.globalGameDB.deleteAll(this.deleteGlobal));
             promise = $.when.apply(null, promises);
             promise.then(function () {
                 yet = false;
