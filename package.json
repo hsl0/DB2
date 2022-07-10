@@ -19,16 +19,11 @@
   },
   "homepage": "https://github.com/hsl0/libertygame-DB2#readme",
   "devDependencies": {
-    "@types/libertygame-env": "^1.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.12.0",
-    "@typescript-eslint/parser": "^5.12.0",
-    "eslint": "^8.9.0",
-    "types-mediawiki": "^1.2.0",
+    "@types/libertygame": "github:hsl0/libertygame-types",
     "typescript": "^4.5.5"
   },
   "workspaces": [
-    "lib/hybridStorage",
-    "env"
+    "lib/hybridStorage"
   ],
   "dependencies": {
     "hybridStorage": "^2.0.0-alpha.0"

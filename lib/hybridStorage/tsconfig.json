@@ -21,14 +21,13 @@
             "DOM",
             "ES2017"
         ],
+        "types": [
+            "libertygame-env",
+            "types-mediawiki"
+        ],
         "composite": true
     },
-    "files": [
-        "hybridStorage.ts"
-    ],
-    "references": [
-        {
-            "path": "env"
-        }
+    "include": [
+        "**/*"
     ]
 }
