@@ -26,8 +26,7 @@
         "rootDir": "src"
     },
     "include": [
-        "src/**/*",
-        "env/**/*"
+        "src/**/*"
     ],
     "references": [
         {

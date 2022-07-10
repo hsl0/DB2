@@ -23,15 +23,12 @@
         ],
         "composite": true
     },
-    "include": [
-        "../../env"
-    ],
     "files": [
         "hybridStorage.ts"
     ],
     "references": [
         {
-            "path": "../../env"
+            "path": "env"
         }
     ]
 }
