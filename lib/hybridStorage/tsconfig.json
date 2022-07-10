@@ -9,7 +9,8 @@
         "newLine": "lf",
         "target": "ES5",
         "forceConsistentCasingInFileNames": true,
-        "outDir": ".",
+        "outDir": "dist",
+        "rootDir": "src",
         "strictBindCallApply": true,
         "strictFunctionTypes": true,
         "strictNullChecks": true,
@@ -21,13 +22,9 @@
             "DOM",
             "ES2017"
         ],
-        "types": [
-            "libertygame-env",
-            "types-mediawiki"
-        ],
         "composite": true
     },
     "include": [
-        "**/*"
+        "src/**/*"
     ]
 }

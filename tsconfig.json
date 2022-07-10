@@ -17,7 +17,6 @@
         "sourceMap": true,
         "module": "CommonJS",
         "declaration": true,
-        "declarationDir": "types",
         "lib": [
             "DOM",
             "ES2017"
@@ -29,9 +28,6 @@
         "src/**/*"
     ],
     "references": [
-        {
-            "path": "env"
-        },
         {
             "path": "lib/hybridStorage"
         }

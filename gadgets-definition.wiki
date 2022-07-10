@@ -1,0 +1,3 @@
+* hybridStorage[ResourceLoader]|hybridStorage.js
+* DB2-storage[ResourceLoader|package]|DB2-storage.js|DB2-common.js
+* DB2-controller[ResourceLoader|package]|DB2-controller.js|DB2-common.js

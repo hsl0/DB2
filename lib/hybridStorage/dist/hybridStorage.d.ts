@@ -27,14 +27,10 @@ declare abstract class SyncableStorage {
     abstract has(key: string): boolean;
     abstract hasAll(keysArr?: string[], ...keysArg: string[]): boolean;
     abstract set(key: string, value: string): PromiseLike<any>;
-    abstract setAll(entries: {
-        [key: string]: string;
-    }): PromiseLike<any>;
+    abstract setAll(entries: Record<string, string>): PromiseLike<any>;
     abstract refresh(): PromiseLike<any>;
     abstract keys(): string[];
-    abstract values(): {
-        [key: string]: string;
-    };
+    abstract values(): Record<string, string>;
     abstract subset(namespace: string, keyEncoder?: KeyEncoder): SyncableStorage;
     abstract copy(keyEncoder: KeyEncoder): SyncableStorage;
     encodeKey?(key: string): string;
