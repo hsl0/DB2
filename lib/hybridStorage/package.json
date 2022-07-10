@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/hsl0/libertygame-DB2#readme",
   "devDependencies": {
-    "@types/libertygame-env": "^1.0.0"
+    "@types/libertygame-env": "^1.0.0",
+    "types-mediawiki": "^1.2.0"
   }
 }
