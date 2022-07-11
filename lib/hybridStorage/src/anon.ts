@@ -221,4 +221,5 @@ class LocalStorage extends SyncableStorage {
     }
 }
 
+//@ts-ignore
 export = new LocalStorage() as SyncableStorage;

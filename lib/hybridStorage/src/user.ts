@@ -1,3 +1,4 @@
+/// <reference types="mediawiki/mw" />
 import {
     SyncableStorage,
     STORAGE,
@@ -27,7 +28,7 @@ const { saveOption, saveOptions } = (() => {
 
             timeout = null;
             deferred = $.Deferred();
-        }, 100);
+        }, 100) as any;
         return deferred.promise();
     }
 
@@ -211,7 +212,7 @@ class CloudStorage extends SyncableStorage {
 
                 timeout = null;
                 deferred = $.Deferred();
-            }, 100);
+            }, 100) as any;
             return deferred.promise();
         };
     })();
@@ -279,4 +280,5 @@ class CloudStorage extends SyncableStorage {
     }
 }
 
+//@ts-ignore
 export = new CloudStorage() as SyncableStorage;

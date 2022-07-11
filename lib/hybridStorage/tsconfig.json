@@ -16,7 +16,7 @@
         "strictNullChecks": true,
         "alwaysStrict": true,
         "sourceMap": true,
-        "module": "CommonJS",
+        "module": "ES2015",
         "declaration": true,
         "lib": [
             "DOM",
@@ -25,6 +25,7 @@
         "composite": true
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "../../node_modules/types-mediawiki"
     ]
 }
