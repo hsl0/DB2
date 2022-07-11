@@ -1,3 +1,4 @@
+/// <reference types="mediawiki/mw" />
 import {
     SyncableStorage,
     STORAGE,
