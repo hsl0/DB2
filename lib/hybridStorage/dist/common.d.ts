@@ -1,17 +1,22 @@
-declare const STORAGE: unique symbol;
-declare const NAMESPACE: unique symbol;
-declare const NAMESPACEE: unique symbol;
-declare const PRE_ENCODED: unique symbol;
-declare const ENCODE_KEY: unique symbol;
-declare const DECODE_KEY: unique symbol;
-declare const IS_MY_KEY: unique symbol;
-interface KeyEncoder {
+export declare const STORAGE: unique symbol;
+export declare const NAMESPACE: unique symbol;
+export declare const NAMESPACEE: unique symbol;
+export declare const PRE_ENCODED: unique symbol;
+export declare const ENCODE_KEY: unique symbol;
+export declare const DECODE_KEY: unique symbol;
+export declare const IS_MY_KEY: unique symbol;
+export declare const propOptions: {
+    configurable: boolean;
+    enumerable: boolean;
+    writable: boolean;
+};
+export interface KeyEncoder {
     encoder(key: string): string;
     decoder(key: string): string;
     encodeNamespace?: boolean;
     preEncodable?: boolean;
 }
-declare abstract class SyncableStorage {
+export declare abstract class SyncableStorage {
     protected abstract readonly [STORAGE]: unknown;
     protected readonly [NAMESPACE]: string;
     protected readonly [NAMESPACEE]: string;
@@ -39,5 +44,3 @@ declare abstract class SyncableStorage {
     protected [DECODE_KEY](key: string): string;
     protected [IS_MY_KEY](key: string): boolean;
 }
-declare const _default: SyncableStorage;
-export = _default;

@@ -279,4 +279,5 @@ class CloudStorage extends SyncableStorage {
     }
 }
 
+//@ts-ignore
 export = new CloudStorage() as SyncableStorage;

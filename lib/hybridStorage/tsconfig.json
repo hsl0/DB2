@@ -16,7 +16,7 @@
         "strictNullChecks": true,
         "alwaysStrict": true,
         "sourceMap": true,
-        "module": "CommonJS",
+        "module": "ES2015",
         "declaration": true,
         "lib": [
             "DOM",
