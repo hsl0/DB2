@@ -52,6 +52,7 @@ function enableDB2() {
                 noti = mw.notification.notify('DB2 데이터를 동기화하는 중입니다...', {
                     autoHide: false,
                     tag: 'gameDB',
+                    //@ts-ignore
                     type: 'pending',
                 });
                 DataChange.prototype.save
@@ -293,6 +294,7 @@ function enableDB2() {
                         noti = mw.notification.notify('데이터를 저장하는 중입니다...', {
                             autoHide: false,
                             tag: 'gameDB',
+                            //@ts-ignore
                             type: 'pending',
                         });
                     }
