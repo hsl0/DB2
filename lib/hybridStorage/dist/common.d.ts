@@ -1,7 +1,6 @@
 export declare const STORAGE: unique symbol;
 export declare const MEMBERS: unique symbol;
 export declare const GET_MEMBERS: unique symbol;
-export declare const LOCKED: unique symbol;
 export declare const NAMESPACE: unique symbol;
 export declare const ENCODE_KEY: unique symbol;
 export declare const DECODE_KEY: unique symbol;

@@ -1,2 +1,2 @@
-import type { SyncableStorage } from './common';
+import { SyncableStorage } from './common';
 export = SyncableStorage;

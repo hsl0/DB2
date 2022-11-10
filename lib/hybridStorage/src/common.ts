@@ -1,7 +1,6 @@
 export const STORAGE = Symbol('storage');
 export const MEMBERS = Symbol('member keys');
 export const GET_MEMBERS = Symbol('get members');
-export const LOCKED = Symbol('locked');
 export const NAMESPACE = Symbol('namespace');
 export const ENCODE_KEY = Symbol('encode key');
 export const DECODE_KEY = Symbol('decode key');
