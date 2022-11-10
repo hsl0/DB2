@@ -17,7 +17,7 @@ interface StorageOriginInit<T> {
     readonly namespace?: string;
     keys(this: StorageOrigin<T>): Set<string>;
     get(this: StorageOrigin<T>, key: string): string | null;
-    set(this: StorageOrigin<T>, key: string, value: string): void;
+    set(this: StorageOrigin<T>, key: string, value: string | null): void;
     delete?(this: StorageOrigin<T>, key: string): void;
 }
 interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {

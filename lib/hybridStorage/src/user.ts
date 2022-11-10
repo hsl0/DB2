@@ -6,6 +6,7 @@ export const STAGE = Symbol('stageed data cache');
 
 const api = new mw.Api();
 
+// 미디어위키 options API (mw.user.options) 추상화
 const remoteOrigin = new StorageOrigin<mw.Map>({
     storage: mw.user.options,
     needSync: true,

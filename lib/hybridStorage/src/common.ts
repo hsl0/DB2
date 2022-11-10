@@ -7,27 +7,31 @@ export const ENCODE_KEY = Symbol('encode key');
 export const DECODE_KEY = Symbol('decode key');
 export const IS_MY_KEY = Symbol('Is it my key?');
 
+// 런타임 readonly PropertyDescriptor 옵션
 export const propOptions: PropertyDescriptor = {
     configurable: false,
     enumerable: true,
     writable: false,
 };
 
+// 인코더/디코더 묶음 객체
 export interface KeyEncoder {
     encoder(key: string): string;
     decoder(key: string): string;
 }
 
+// 공통 StorageOrigin 생성 인자
 interface StorageOriginInit<T> {
     readonly storage: T;
     readonly needSync: boolean;
     readonly namespace?: string;
     keys(this: StorageOrigin<T>): Set<string>;
     get(this: StorageOrigin<T>, key: string): string | null;
-    set(this: StorageOrigin<T>, key: string, value: string): void;
+    set(this: StorageOrigin<T>, key: string, value: string | null): void;
     delete?(this: StorageOrigin<T>, key: string): void;
 }
 
+// 원격 전용 StorageOrigin 생성 인자
 interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {
     readonly needSync: true;
     delete?(this: StorageOrigin<T>, key: string): void;
@@ -35,6 +39,7 @@ interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {
     pull(this: StorageOrigin<T>): PromiseLike<any>;
 }
 
+// 로컬 전용 StorageOrigin 생성 인자
 interface LocalStorageOriginInit<T> extends StorageOriginInit<T> {
     readonly needSync: false;
     delete(key: string): void;
@@ -67,6 +72,7 @@ interface StrictEventTarget<T extends { [_K: string]: Event }> extends EventTarg
     ): void;
 }
 
+// 원본 저장소 API 추상화 계층
 export class StorageOrigin<T> extends EventTarget {
     readonly storage: T;
     stage?: Record<string, string | null>;
@@ -109,6 +115,7 @@ export class StorageOrigin<T> extends EventTarget {
     }
 }
 
+// localStorage API 추상화
 export const localOrigin = new StorageOrigin<Storage>({
     storage: localStorage,
     needSync: false,
