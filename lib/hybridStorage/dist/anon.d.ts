@@ -1,3 +1,2 @@
-import { SyncableStorage } from './common';
-declare const _default: SyncableStorage;
+declare const _default: any;
 export = _default;

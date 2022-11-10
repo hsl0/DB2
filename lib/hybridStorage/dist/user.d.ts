@@ -1,3 +1,5 @@
 import { SyncableStorage } from './common';
-declare const _default: SyncableStorage;
+export declare const CACHE: unique symbol;
+export declare const STAGE: unique symbol;
+declare const _default: SyncableStorage<any>;
 export = _default;

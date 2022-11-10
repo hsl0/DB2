@@ -22,7 +22,8 @@
             "DOM",
             "ES2017"
         ],
-        "composite": true
+        "composite": true,
+        "downlevelIteration": true
     },
     "include": [
         "src/**/*",
