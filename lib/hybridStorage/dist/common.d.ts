@@ -19,40 +19,54 @@ interface StorageOriginInit<T> {
     set(this: StorageOrigin<T>, key: string, value: string | null): void;
     delete?(this: StorageOrigin<T>, key: string): void;
 }
-interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {
+export interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {
     readonly needSync: true;
-    delete?(this: StorageOrigin<T>, key: string): void;
-    push(this: StorageOrigin<T>): PromiseLike<any>;
-    pull(this: StorageOrigin<T>): PromiseLike<any>;
+    push(this: RemoteStorageOrigin<T>): PromiseLike<any>;
+    pull(this: RemoteStorageOrigin<T>): PromiseLike<any>;
+    keys(this: RemoteStorageOrigin<T>): Set<string>;
+    get(this: RemoteStorageOrigin<T>, key: string): string | null;
+    set(this: RemoteStorageOrigin<T>, key: string, value: string | null): void;
+    delete?(this: RemoteStorageOrigin<T>, key: string): void;
 }
-interface LocalStorageOriginInit<T> extends StorageOriginInit<T> {
+export interface LocalStorageOriginInit<T> extends StorageOriginInit<T> {
     readonly needSync: false;
+    keys(this: LocalStorageOrigin<T>): Set<string>;
+    get(this: LocalStorageOrigin<T>, key: string): string | null;
+    set(this: LocalStorageOrigin<T>, key: string, value: string | null): void;
+    delete?(this: LocalStorageOrigin<T>, key: string): void;
+}
+interface StorageOriginBase<T> extends EventTarget, StorageOriginInit<T> {
+    keys(): Set<string>;
+    get(key: string): string | null;
+    set(key: string, value: string | null): void;
     delete(key: string): void;
 }
-export declare class StorageOrigin<T> extends EventTarget {
-    readonly storage: T;
-    stage?: Record<string, string | null>;
-    unsaved?: boolean;
-    readonly needSync: boolean;
-    readonly namespace?: string;
-    constructor(init: RemoteStorageOriginInit<T>);
-    constructor(init: LocalStorageOriginInit<T>);
-    get: (key: string) => string | null;
-    set: (key: string, value: string) => void;
-    keys: () => Set<string>;
+export interface RemoteStorageOrigin<T> extends StorageOriginBase<T>, RemoteStorageOriginInit<T> {
+    stage: Record<string, string | null>;
+    unsaved: boolean;
+    needSync: true;
     delete(key: string): void;
-    push(): PromiseLike<any>;
-    pull(): PromiseLike<any>;
 }
-export declare const localOrigin: StorageOrigin<Storage>;
+export interface LocalStorageOrigin<T> extends StorageOriginBase<T>, LocalStorageOriginInit<T> {
+    needSync: false;
+    delete(key: string): void;
+}
+declare type StorageOrigin<T> = RemoteStorageOrigin<T> | LocalStorageOrigin<T>;
+declare const StorageOrigin: {
+    new <T>(init: RemoteStorageOriginInit<T>): RemoteStorageOrigin<T>;
+    new <T_1>(init: LocalStorageOriginInit<T_1>): LocalStorageOrigin<T_1>;
+};
+export { StorageOrigin };
+export declare const localOrigin: LocalStorageOrigin<Storage>;
 export declare abstract class SyncableStorage<T> {
     protected abstract readonly [STORAGE]: StorageOrigin<T>;
     protected readonly [MEMBERS]: Set<string>;
     readonly [NAMESPACE]: string;
     readonly isRoot: boolean;
-    abstract readonly hasRemote: boolean;
+    readonly hasRemote: boolean;
+    readonly keyEncoded: boolean;
     constructor(parent?: SyncableStorage<T>, namespace?: string, keyEncoder?: KeyEncoder);
-    get unsaved(): boolean | undefined;
+    get unsaved(): boolean;
     get size(): number;
     clear(): PromiseLike<any>;
     delete(key: string): PromiseLike<any>;
@@ -70,13 +84,12 @@ export declare abstract class SyncableStorage<T> {
     keys(): string[];
     values(): Record<string, string>;
     subset(namespace: string, keyEncoder?: KeyEncoder): this;
-    abstract pull(): PromiseLike<any>;
-    abstract push(): PromiseLike<any>;
-    encodeKey?(key: string): string;
-    decodeKey?(key: string): string;
+    pull(): PromiseLike<any>;
+    push(): PromiseLike<any>;
+    encodeKey(key: string): string;
+    decodeKey(key: string): string;
     protected [ENCODE_KEY](key: string): string;
     protected [DECODE_KEY](key: string): string;
     protected [IS_MY_KEY](key: string): boolean;
     protected [GET_MEMBERS](parentMembers?: Set<string> | string[]): void;
 }
-export {};

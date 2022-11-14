@@ -31,17 +31,26 @@ interface StorageOriginInit<T> {
 }
 
 // 원격 전용 StorageOrigin 생성 인자
-interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {
+export interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {
     readonly needSync: true;
-    delete?(this: StorageOrigin<T>, key: string): void;
-    push(this: StorageOrigin<T>): PromiseLike<any>;
-    pull(this: StorageOrigin<T>): PromiseLike<any>;
+
+    push(this: RemoteStorageOrigin<T>): PromiseLike<any>;
+    pull(this: RemoteStorageOrigin<T>): PromiseLike<any>;
+
+    keys(this: RemoteStorageOrigin<T>): Set<string>;
+    get(this: RemoteStorageOrigin<T>, key: string): string | null;
+    set(this: RemoteStorageOrigin<T>, key: string, value: string | null): void;
+    delete?(this: RemoteStorageOrigin<T>, key: string): void;
 }
 
 // 로컬 전용 StorageOrigin 생성 인자
-interface LocalStorageOriginInit<T> extends StorageOriginInit<T> {
+export interface LocalStorageOriginInit<T> extends StorageOriginInit<T> {
     readonly needSync: false;
-    delete(key: string): void;
+
+    keys(this: LocalStorageOrigin<T>): Set<string>;
+    get(this: LocalStorageOrigin<T>, key: string): string | null;
+    set(this: LocalStorageOrigin<T>, key: string, value: string | null): void;
+    delete?(this: LocalStorageOrigin<T>, key: string): void;
 }
 
 interface StrictEvent<T extends string> extends Event {
@@ -71,17 +80,41 @@ interface StrictEventTarget<T extends { [_K: string]: Event }> extends EventTarg
     ): void;
 }
 
+interface StorageOriginBase<T> extends EventTarget, StorageOriginInit<T> {
+    keys(): Set<string>;
+    get(key: string): string | null;
+    set(key: string, value: string | null): void;
+    delete(key: string): void;
+}
+export interface RemoteStorageOrigin<T>
+    extends StorageOriginBase<T>,
+        RemoteStorageOriginInit<T> {
+    stage: Record<string, string | null>;
+    unsaved: boolean;
+
+    needSync: true;
+    delete(key: string): void;
+}
+export interface LocalStorageOrigin<T>
+    extends StorageOriginBase<T>,
+        LocalStorageOriginInit<T> {
+    needSync: false;
+    delete(key: string): void;
+}
+
 // 원본 저장소 API 추상화 계층
-export class StorageOrigin<T> extends EventTarget {
+type StorageOrigin<T> = RemoteStorageOrigin<T> | LocalStorageOrigin<T>;
+const StorageOrigin = class StorageOrigin<T>
+    extends EventTarget
+    implements StorageOriginBase<T>
+{
     readonly storage: T;
     stage?: Record<string, string | null>;
     unsaved?: boolean;
     readonly needSync: boolean;
     readonly namespace?: string;
 
-    constructor(init: RemoteStorageOriginInit<T>);
-    constructor(init: LocalStorageOriginInit<T>);
-    constructor(init: StorageOriginInit<T>) {
+    constructor(init: RemoteStorageOriginInit<T> | LocalStorageOriginInit<T>) {
         super();
 
         this.storage = init.storage;
@@ -94,10 +127,10 @@ export class StorageOrigin<T> extends EventTarget {
         if (init.delete) this.delete = init.delete;
 
         if (init.needSync) {
-            this.stage = {};
-            this.unsaved = false;
-            this.pull = (init as RemoteStorageOriginInit<T>).pull;
-            this.push = (init as RemoteStorageOriginInit<T>).push;
+            (this as RemoteStorageOrigin<T>).stage = {};
+            (this as RemoteStorageOrigin<T>).unsaved = false;
+            (this as RemoteStorageOrigin<T>).pull = init.pull;
+            (this as RemoteStorageOrigin<T>).push = init.push;
         }
     }
     get: (key: string) => string | null;
@@ -106,13 +139,13 @@ export class StorageOrigin<T> extends EventTarget {
     delete(key: string): void {
         this.set(key, null as any);
     }
-    push(): PromiseLike<any> {
-        return Promise.resolve();
-    }
-    pull(): PromiseLike<any> {
-        return Promise.resolve();
-    }
-}
+    push?(): PromiseLike<any>;
+    pull?(): PromiseLike<any>;
+} as {
+    new <T>(init: RemoteStorageOriginInit<T>): RemoteStorageOrigin<T>;
+    new <T>(init: LocalStorageOriginInit<T>): LocalStorageOrigin<T>;
+};
+export { StorageOrigin };
 
 // localStorage API 추상화
 export const localOrigin = new StorageOrigin<Storage>({
@@ -135,11 +168,12 @@ export const localOrigin = new StorageOrigin<Storage>({
 // 온라인/오프라인 공통 저장소 클래스
 export abstract class SyncableStorage<T> {
     protected abstract readonly [STORAGE]: StorageOrigin<T>; // 원본이 저장되는 저장소
-    protected readonly [MEMBERS]: Set<string> = new Set(); // 인코딩을 거친 원본 저장소상의 소속 키
+    protected readonly [MEMBERS]: Set<string>; // 인코딩을 거친 원본 저장소상의 소속 키
 
     readonly [NAMESPACE]: string; // (하위 저장소의 경우) 원본 저장소상 소속 키의 접두어
     readonly isRoot: boolean; // 최상위 저장소 여부
-    abstract readonly hasRemote: boolean; // 동기화될 클라우드 저장소 존재 여부
+    readonly hasRemote: boolean; // 동기화될 클라우드 저장소 존재 여부
+    readonly keyEncoded: boolean;
 
     constructor(
         parent?: SyncableStorage<T>,
@@ -152,23 +186,28 @@ export abstract class SyncableStorage<T> {
 
             this.encodeKey = keyEncoder.encoder;
             this.decodeKey = keyEncoder.decoder;
-        }
+            this.keyEncoded = true;
+        } else this.keyEncoded = false;
 
         this.isRoot = !parent;
+        this.hasRemote ??= this[STORAGE].needSync;
         this[NAMESPACE] =
             (parent ? parent[NAMESPACE] : this[STORAGE].namespace || '') + namespace;
 
+        this[MEMBERS] = new Set();
         this[GET_MEMBERS](parent?.[MEMBERS] || this[STORAGE].keys());
 
         Object.defineProperties(this, {
             isRoot: propOptions,
+            hasRemote: propOptions,
+            keyEncoded: propOptions,
             [NAMESPACE]: propOptions,
         });
     }
 
     // 저장이 완료되지 않았는지 여부
-    get unsaved() {
-        return this[STORAGE].unsaved;
+    get unsaved(): boolean {
+        return Boolean((this[STORAGE] as any).unsaved);
     }
 
     // 소속 키의 수
@@ -318,30 +357,36 @@ export abstract class SyncableStorage<T> {
             parent?: SyncableStorage<T>,
             namespace?: string,
             keyEncoder?: KeyEncoder
-        ) => this)(this, namespace, keyEncoder);
+        ) => this)(this, this.encodeKey(namespace), keyEncoder);
     }
 
     // 클라우드 저장소에서 최신 데이터 불러오기
-    abstract pull(): PromiseLike<any>;
+    pull(): PromiseLike<any> {
+        return Promise.resolve(true);
+    }
 
     // 클라우드 저장소에 수정사항 저장하기
-    abstract push(): PromiseLike<any>;
+    push(): PromiseLike<any> {
+        return Promise.resolve(true);
+    }
 
     // 키 인코딩하기 (원본 저장소상 키 이름으로 변환)
-    encodeKey?(key: string): string;
+    encodeKey(key: string): string {
+        return key;
+    }
 
     // 키 디코딩하기 (원본 저장소상 키 이름에서 변환)
-    decodeKey?(key: string): string;
+    decodeKey(key: string): string {
+        return key;
+    }
 
     // 키 인코딩 내부함수 (접두어+인코딩된 키)
     protected [ENCODE_KEY](key: string): string {
-        if (!this.encodeKey) return this[NAMESPACE] + key;
         return this[NAMESPACE] + this.encodeKey(key);
     }
 
     // 키 디코딩 내부함수 (접두어를 제거하고 디코딩된 키 추출)
     protected [DECODE_KEY](key: string): string {
-        if (!this.decodeKey) return key.slice(this[NAMESPACE].length);
         return this.decodeKey(key.slice(this[NAMESPACE].length));
     }
 
@@ -363,31 +408,25 @@ export abstract class SyncableStorage<T> {
 
 // 클라우드에 업로드 불가능할 때, 로컬에 임시 저장하는 클래스
 class BackupStorage<T, U> {
-    storage: StorageOrigin<T>; // 로컬 임시 저장소
-    remote: StorageOrigin<U>; // 클라우드 주 저장소
-    rootNamespace: string; // 시스템 설정을 저장하는 네임스페이스
-    subNamespace: string; // 임시 데이터 저장소의 하위 네임스페이스
+    readonly subNamespace: string; // 임시 데이터 저장소의 하위 네임스페이스
     deviceID: string; // 기기 ID (충돌시 대처)
     userID: string; // 사용자 ID (로그인된 사용자를 추적할 수 없도록 난수 사용)
     unsaved: boolean; // 저장이 완료되지 않았는지 여부
-    cryptoKeyPromise?: PromiseLike<CryptoKey>;
+    private cryptoKeyPromise?: PromiseLike<CryptoKey>;
     cryptoKey?: CryptoKey; // 저장소 암호화에 사용될 비밀키
     cache?: Record<string, string>; // 임시 저장된 데이터의 사본 (세션이 종료되지 않았을 때 불필요한 암호화/복호화 방지)
 
     constructor(
-        storage: StorageOrigin<T>,
-        remote: StorageOrigin<U>,
-        rootNamespace: string = '',
-        subNamespace: string = ''
+        readonly storage: LocalStorageOrigin<T>, // 로컬 임시 저장소
+        readonly remote: RemoteStorageOrigin<U>, // 클라우드 주 저장소
+        readonly rootNamespace: string = '', // 시스템 설정을 저장하는 네임스페이스
+        subNamespace = ''
     ) {
         if (!(storage instanceof StorageOrigin && remote instanceof StorageOrigin))
             throw new TypeError(
                 'Target storage should be wrapped with StorageOrigin object'
             );
 
-        this.storage = storage;
-        this.remote = remote;
-        this.rootNamespace = rootNamespace;
         this.subNamespace = this.rootNamespace + subNamespace;
         this.deviceID = this.getDeviceID();
         this.userID = this.getUserID();
@@ -407,14 +446,22 @@ class BackupStorage<T, U> {
 
         if (this.cache) data = this.cache;
         else {
-            const cipher: string | null = this.storage.get(
-                this.subNamespace + this.userID
-            );
+            const cipher = this.storage.get(this.subNamespace + this.userID);
             if (cipher) data = await this.decrypt(cipher);
             else return;
         }
 
-        this.remote.get(this.rootNamespace + 'from');
+        const from = this.remote.get(this.rootNamespace + 'from');
+        if (from) {
+        } else {
+            this.remote.stage = { ...data, ...this.remote.stage };
+            return this.remote.push();
+        }
+    }
+
+    // 메타데이터와 함께 업로드
+    async push(): Promise<any> {
+        this.remote.push();
     }
 
     // 장치 ID 불러오기
@@ -430,6 +477,12 @@ class BackupStorage<T, U> {
     // 주 저장소에 마지막으로 저장한 장치/시간을 나타내는 from 메타데이터 값 불러오기
     protected getFrom(): string {
         return this.deviceID + '/' + Date.now();
+    }
+
+    // from 메타데이터에서 장치 ID/시간 추출
+    protected static parseFrom(from: string): { deviceID: string; date: number } {
+        const [deviceID, date] = from.split('/');
+        return { deviceID, date: Number(date) };
     }
 
     // 바이너리를 base64 문자열로 변환

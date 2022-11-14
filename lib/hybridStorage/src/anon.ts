@@ -1,8 +1,7 @@
-import { SyncableStorage, STORAGE, localOrigin } from './common';
+import { SyncableStorage, STORAGE, localOrigin, propOptions } from './common';
 
 class LocalStorage extends SyncableStorage<Storage> {
-    protected readonly [STORAGE] = localOrigin;
-    readonly hasRemote = false;
+    protected readonly [STORAGE]!: typeof localOrigin;
 
     pull() {
         return Promise.resolve(true);
@@ -12,6 +11,11 @@ class LocalStorage extends SyncableStorage<Storage> {
         return Promise.resolve(true);
     }
 }
+Object.defineProperties(LocalStorage.prototype, {
+    [STORAGE]: {
+        value: localOrigin,
+        ...propOptions,
+    },
+});
 
-//@ts-ignore
-export = new LocalStorage() as SyncableStorage;
+export = new LocalStorage() as SyncableStorage<Storage>;

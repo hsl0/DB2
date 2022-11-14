@@ -1,8 +1,7 @@
 /// <reference types="mediawiki/mw" />
-import { SyncableStorage, StorageOrigin, STORAGE } from './common';
+import { SyncableStorage, StorageOrigin, STORAGE, propOptions } from './common';
 
-export const CACHE = Symbol('temporary storage cache');
-export const STAGE = Symbol('stageed data cache');
+const DEBOUNCE = Symbol('debounce function');
 
 const api = new mw.Api();
 
@@ -12,17 +11,17 @@ const remoteOrigin = new StorageOrigin<mw.Map>({
     needSync: true,
     namespace: 'userjs-',
     get(key: string): string | null {
-        return this.stage![key] || this.storage.get(key);
+        return this.stage[key] || this.storage.get(key);
     },
     set(key: string, value: string): void {
-        this.stage![key] = value;
+        this.stage[key] = value;
         this.unsaved = true;
     },
     delete(key: string) {
-        this.stage![key] = null;
+        this.stage[key] = null;
         this.unsaved = true;
     },
-    keys() {
+    keys(): Set<string> {
         const keys = new Set(Object.keys(this.storage.get()));
 
         for (const key in this.stage) {
@@ -49,27 +48,38 @@ const remoteOrigin = new StorageOrigin<mw.Map>({
                 mw.user.options.values = response.query.userinfo.options;
             });
     },
-    push(): PromiseLike<void> {
-        const stage = this.stage as Record<string, string>;
-        this.stage = {};
-        this.unsaved = false;
-
-        return api
-            .saveOptions(stage)
-            .catch((code: string, info?: Object) =>
-                $.Deferred().reject(stage, code, info)
-            );
+    push(): JQueryPromise<void> {
+        return api.saveOptions(this.stage).then(
+            () => {
+                this.unsaved = false;
+            },
+            (code: string, info?: Object) => {
+                return $.Deferred().reject(this.stage, code, info);
+            }
+        );
     },
 });
 
 class CloudStorage extends SyncableStorage<mw.Map> {
-    protected readonly [STORAGE] = remoteOrigin;
-    readonly hasRemote = true;
+    protected readonly [STORAGE]!: typeof remoteOrigin;
+    private [DEBOUNCE] = mw.util.debounce(
+        (resolve) => resolve(this[STORAGE].push()),
+        100
+    );
 
-    async pull() {}
+    pull() {
+        return this[STORAGE].pull();
+    }
 
-    async push() {}
+    push() {
+        return new Promise(this[DEBOUNCE]);
+    }
 }
+Object.defineProperties(CloudStorage.prototype, {
+    [STORAGE]: {
+        value: remoteOrigin,
+        ...propOptions,
+    },
+});
 
-//@ts-ignore
-export = new CloudStorage() as SyncableStorage<any>;
+export = new CloudStorage() as SyncableStorage<mw.Map>;
