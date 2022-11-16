@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rootGameDB = exports.getLocalNamespace = exports.decode = exports.encode = void 0;
+exports.rootGameDB = exports.getLocalNamespace = exports.keyEncoder = exports.decode = exports.encode = void 0;
 // common.ts, controller.ts에서 공용으로 사용
 var hybridStorage = require("hybridStorage");
 /* option key 인코딩
@@ -25,11 +25,20 @@ function decode(key) {
     return decodeURIComponent(key.replace(/_(?=[a-zA-Z0-9]{2})/g, '%').replace(/__/g, '_'));
 }
 exports.decode = decode;
+exports.keyEncoder = {
+    encoder: encode,
+    decoder: decode,
+};
 function getLocalNamespace(pagename) {
     if (pagename === void 0) { pagename = mw.config.get('wgPageName'); }
-    var _a = pagename.split('/')[0].split(':'), namespace = _a[0], title = _a[1];
-    return "".concat(namespace.replace(/talk|토론/gi, ''), ":").concat(title);
+    var root = pagename.split('/')[0];
+    if (pagename.includes(':')) {
+        var _a = root.split(':'), namespace = _a[0], title = _a[1];
+        return "".concat(namespace.replace(/talk|토론/gi, ''), ":").concat(title);
+    }
+    else
+        return ":".concat(root);
 }
 exports.getLocalNamespace = getLocalNamespace;
-exports.rootGameDB = hybridStorage.subset('gameDB-');
+exports.rootGameDB = hybridStorage.subset('gameDB-', exports.keyEncoder);
 //# sourceMappingURL=common.js.map

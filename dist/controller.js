@@ -16,8 +16,7 @@ function enableDB2() {
     var title = (0, common_js_1.getLocalNamespace)();
     var useCGIProtect = Boolean(document.getElementsByClassName('protectCGI')[0]);
     var currentSearch = useCGIProtect
-        ? //@ts-ignore
-            parseJSON(sessionStorage.getItem('protectCGI'))
+        ? parseJSON(sessionStorage.getItem('protectCGI'))
         : geturlSearch();
     var currentTitle = (useCGIProtect && currentSearch && currentSearch.title) ||
         mw.config.get('wgPageName');
@@ -42,10 +41,6 @@ function enableDB2() {
         $('.gameDB-container').removeClass('gameDB-container');
         return;
     }
-    var rootGameDB = common_js_1.rootGameDB.copy({
-        encoder: common_js_1.encode,
-        decoder: common_js_1.decode,
-    });
     if (temp)
         registerTrigger(function () {
             function save() {
@@ -60,7 +55,7 @@ function enableDB2() {
                     .then(function () {
                     noti = mw.notification.notify("DB2 \uB370\uC774\uD130\uB97C \uB3D9\uAE30\uD654\uD558\uC600\uC2B5\uB2C8\uB2E4. (\uB370\uC774\uD130 \uB0A0\uC9DC: ".concat(new Date(change.timestamp), ")"), { tag: 'gameDB' });
                     localStorage.removeItem('gamedb-temp-' + mw.config.get('wgUserName'));
-                    rootGameDB.refresh();
+                    common_js_1.rootGameDB.push();
                 }, 
                 //@ts-ignore
                 notifyApiError.bind(null, 'DB2 데이터 동기화에 실패하였습니다. 다음 접속에 다시 시도합니다.', { tag: 'gameDB' }));
@@ -108,7 +103,7 @@ function enableDB2() {
                 key = data.global;
             }
             else {
-                storage = rootGameDB;
+                storage = common_js_1.rootGameDB;
                 base = this.root;
                 delBase = this.deleteRoot;
                 key = title;
@@ -133,9 +128,7 @@ function enableDB2() {
                             fill: 없는 파라미터만 불러옴
                         */
                     if (!(location.search && 'safe' in data)) {
-                        Object.assign(this.params, 
-                        //@ts-ignore
-                        parseJSON(storage.get(key)), 'fill' in data && this.params);
+                        Object.assign(this.params, parseJSON(storage.get(key)), 'fill' in data && this.params);
                         this.paramChanged = true;
                     }
                     break;
@@ -181,7 +174,7 @@ function enableDB2() {
                     val = JSON.stringify(new CGI2Parser({
                         get: function (args) {
                             var _this = this;
-                            if (typeof args === 'object')
+                            if (args && typeof args === 'object')
                                 Object.entries(args).forEach(function (_a) {
                                     var key = _a[0], value = _a[1];
                                     if (typeof value !== 'string')
@@ -203,7 +196,7 @@ function enableDB2() {
                         },
                         set: function (args) {
                             var _this = this;
-                            if (typeof args !== 'object')
+                            if (!args || typeof args !== 'object')
                                 throw new TypeError("'set' \uB3D9\uC791\uC758 \uC720\uD6A8\uD55C \uC778\uC790 \uD615\uC2DD\uC740 Object \uC774\uC9C0\uB9CC, ".concat(typeof args, " \uD615\uC2DD\uC758 ").concat(args, "\uAC00 \uC785\uB825\uB418\uC5C8\uC2B5\uB2C8\uB2E4"));
                             Object.entries(args).forEach(function (_a) {
                                 var key = _a[0], value = _a[1];
@@ -221,7 +214,7 @@ function enableDB2() {
                         },
                         def: function (args) {
                             var _this = this;
-                            if (typeof args !== 'object')
+                            if (!args || typeof args !== 'object')
                                 throw new TypeError("'def' \uB3D9\uC791\uC758 \uC720\uD6A8\uD55C \uC778\uC790 \uD615\uC2DD\uC740 Object \uC774\uC9C0\uB9CC, ".concat(typeof args, " \uD615\uC2DD\uC758 ").concat(args, "\uAC00 \uC785\uB825\uB418\uC5C8\uC2B5\uB2C8\uB2E4"));
                             Object.entries(args).forEach(function (_a) {
                                 var key = _a[0], value = _a[1];
@@ -233,7 +226,7 @@ function enableDB2() {
                         },
                         sav: function (args) {
                             var _this = this;
-                            if (typeof args === 'object')
+                            if (args && typeof args === 'object')
                                 Object.entries(args).forEach(function (_a) {
                                     var key = _a[0], value = _a[1];
                                     if (typeof value !== 'string')
@@ -253,9 +246,8 @@ function enableDB2() {
                                             : params[key];
                                 });
                         },
-                    }).parse(
-                    //@ts-ignore
-                    parseJSON('reset' in data ? '' : storage.get(key)) || {}, '[' + data.arg + ']'));
+                    }).parse(parseJSON('reset' in data ? '' : storage.get(key)) ||
+                        {}, '[' + data.arg + ']'));
                     if (val.length > 2)
                         base[key] = val;
                     if (paramChanged)
@@ -276,13 +268,13 @@ function enableDB2() {
             var yet = true;
             var promises = [];
             if (this.deleteRoot.includes(title))
-                promises.push(rootGameDB.delete(title));
+                promises.push(common_js_1.rootGameDB.delete(title));
             else if (title in this.root)
-                promises.push(rootGameDB.set(title, this.root[title]));
-            promises.push(storage_js_1.localGameDB.setAll(this.local));
-            promises.push(storage_js_1.localGameDB.deleteAll(this.deleteLocal));
-            promises.push(storage_js_1.globalGameDB.setAll(this.global));
-            promises.push(storage_js_1.globalGameDB.deleteAll(this.deleteGlobal));
+                promises.push(common_js_1.rootGameDB.set(title, this.root[title]));
+            promises.push(storage_js_1.localGameDB.set(this.local));
+            promises.push(storage_js_1.localGameDB.delete(this.deleteLocal));
+            promises.push(storage_js_1.globalGameDB.set(this.global));
+            promises.push(storage_js_1.globalGameDB.delete(this.deleteGlobal));
             promise = $.when.apply(null, promises);
             promise.then(function () {
                 yet = false;
@@ -312,8 +304,7 @@ function enableDB2() {
         return instant.save().then(function () {
             var url = mw.util.getUrl(instant.params.title || currentTitle, instant.params) + location.hash;
             instantDone = true;
-            if ((instant.params.title && instant.params.title !== currentTitle) ||
-                instant.paramChanged)
+            if (instant.paramChanged)
                 location.href = url;
             else if (noti)
                 noti.close();

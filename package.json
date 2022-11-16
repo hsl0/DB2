@@ -3,7 +3,7 @@
   "version": "2.0.0-alpha.0",
   "description": "새로운 DB 생성형 게임의 작동에 필요합니다.",
   "type": "module",
-  "types": "types",
+  "types": "dist/storage",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run -w lib/hybridStorage build && tsc"

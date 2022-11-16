@@ -1,2 +1,3 @@
 import { SyncableStorage } from './common';
-export = SyncableStorage;
+declare const _default: SyncableStorage<mw.Map<any>|Storage>;
+export = _default;
