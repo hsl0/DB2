@@ -5,6 +5,7 @@ export declare const NAMESPACE: unique symbol;
 export declare const ENCODE_KEY: unique symbol;
 export declare const DECODE_KEY: unique symbol;
 export declare const IS_MY_KEY: unique symbol;
+export declare const PROMISE: unique symbol;
 export declare const propOptions: PropertyDescriptor;
 export interface KeyEncoder {
     encoder(key: string): string;
@@ -51,7 +52,7 @@ export interface LocalStorageOrigin<T> extends StorageOriginBase<T>, LocalStorag
     needSync: false;
     delete(key: string): void;
 }
-declare type StorageOrigin<T> = RemoteStorageOrigin<T> | LocalStorageOrigin<T>;
+type StorageOrigin<T> = RemoteStorageOrigin<T> | LocalStorageOrigin<T>;
 declare const StorageOrigin: {
     new <T>(init: RemoteStorageOriginInit<T>): RemoteStorageOrigin<T>;
     new <T_1>(init: LocalStorageOriginInit<T_1>): LocalStorageOrigin<T_1>;
@@ -61,7 +62,8 @@ export declare const localOrigin: LocalStorageOrigin<Storage>;
 export declare abstract class SyncableStorage<T> {
     protected abstract readonly [STORAGE]: StorageOrigin<T>;
     protected readonly [MEMBERS]: Set<string>;
-    readonly [NAMESPACE]: string;
+    protected readonly [NAMESPACE]: string;
+    protected abstract [PROMISE]: PromiseLike<any>;
     readonly isRoot: boolean;
     readonly hasRemote: boolean;
     readonly keyEncoded: boolean;

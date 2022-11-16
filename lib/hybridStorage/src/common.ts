@@ -5,6 +5,7 @@ export const NAMESPACE = Symbol('namespace');
 export const ENCODE_KEY = Symbol('encode key');
 export const DECODE_KEY = Symbol('decode key');
 export const IS_MY_KEY = Symbol('Is it my key?');
+export const PROMISE = Symbol('promise object');
 
 // 런타임 readonly PropertyDescriptor 옵션
 export const propOptions: PropertyDescriptor = {
@@ -170,10 +171,11 @@ export abstract class SyncableStorage<T> {
     protected abstract readonly [STORAGE]: StorageOrigin<T>; // 원본이 저장되는 저장소
     protected readonly [MEMBERS]: Set<string>; // 인코딩을 거친 원본 저장소상의 소속 키
 
-    readonly [NAMESPACE]: string; // (하위 저장소의 경우) 원본 저장소상 소속 키의 접두어
+    protected readonly [NAMESPACE]: string; // (하위 저장소의 경우) 원본 저장소상 소속 키의 접두어
+    protected abstract [PROMISE]: PromiseLike<any>; // 다음 push 결과값을 반환할 promise
     readonly isRoot: boolean; // 최상위 저장소 여부
     readonly hasRemote: boolean; // 동기화될 클라우드 저장소 존재 여부
-    readonly keyEncoded: boolean;
+    readonly keyEncoded: boolean; // 원본 키가 인코딩을 거쳤는지 여부
 
     constructor(
         parent?: SyncableStorage<T>,
@@ -224,7 +226,7 @@ export abstract class SyncableStorage<T> {
         });
         this[MEMBERS].clear();
 
-        return this.push();
+        return this[PROMISE];
     }
 
     // 키 삭제
@@ -242,7 +244,7 @@ export abstract class SyncableStorage<T> {
             }
         });
 
-        return this.push();
+        return this[PROMISE];
     }
 
     // 모든 키와 값에 대해 일괄 작업 수행
@@ -310,7 +312,7 @@ export abstract class SyncableStorage<T> {
                     const key = this[ENCODE_KEY](keys);
                     this[STORAGE].set(key, value);
                     this[MEMBERS].add(key);
-                    return this.push();
+                    return this[PROMISE];
                 }
             case 'object':
                 for (let key in keys as Record<string, string>) {
@@ -321,7 +323,7 @@ export abstract class SyncableStorage<T> {
                         this[MEMBERS].add(key);
                     }
                 }
-                return this.push();
+                return this[PROMISE];
             default:
                 throw new TypeError(
                     "Failed to execute 'set' on 'SyncableStorage': 1 argument required, but only 0 present."
@@ -362,12 +364,12 @@ export abstract class SyncableStorage<T> {
 
     // 클라우드 저장소에서 최신 데이터 불러오기
     pull(): PromiseLike<any> {
-        return Promise.resolve(true);
+        return this[PROMISE];
     }
 
     // 클라우드 저장소에 수정사항 저장하기
     push(): PromiseLike<any> {
-        return Promise.resolve(true);
+        return this[PROMISE];
     }
 
     // 키 인코딩하기 (원본 저장소상 키 이름으로 변환)

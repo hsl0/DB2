@@ -1,7 +1,7 @@
 /// <reference types="mediawiki/mw" />
-import { SyncableStorage, StorageOrigin, STORAGE, propOptions } from './common';
+import { SyncableStorage, StorageOrigin, STORAGE, propOptions, PROMISE } from './common';
 
-const DEBOUNCE = Symbol('debounce function');
+const RESOLVE = Symbol('promise resolver function');
 
 const api = new mw.Api();
 
@@ -62,17 +62,25 @@ const remoteOrigin = new StorageOrigin<mw.Map>({
 
 class CloudStorage extends SyncableStorage<mw.Map> {
     protected readonly [STORAGE]!: typeof remoteOrigin;
-    private [DEBOUNCE] = mw.util.debounce(
-        (resolve) => resolve(this[STORAGE].push()),
-        100
-    );
-
+    private [RESOLVE]!: (p: PromiseLike<any>) => void;
+    protected [PROMISE]: Promise<any> = new Promise(resolve =>
+    {
+        this[RESOLVE] = resolve;
+    });
+    
     pull() {
         return this[STORAGE].pull();
     }
 
-    push() {
-        return new Promise(this[DEBOUNCE]);
+    push()
+    {
+        const result = this[STORAGE].push();
+        this[RESOLVE](result);
+        this[PROMISE] = new Promise(resolve =>
+        {
+            this[RESOLVE] = resolve;
+        })
+        return result;
     }
 }
 Object.defineProperties(CloudStorage.prototype, {
