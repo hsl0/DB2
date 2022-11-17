@@ -50,15 +50,11 @@ function enableDB2() {
                     //@ts-ignore
                     type: 'pending',
                 });
-                DataChange.prototype.save
-                    .call(change)
-                    .then(function () {
+                DataChange.prototype.save.call(change).then(function () {
                     noti = mw.notification.notify("DB2 \uB370\uC774\uD130\uB97C \uB3D9\uAE30\uD654\uD558\uC600\uC2B5\uB2C8\uB2E4. (\uB370\uC774\uD130 \uB0A0\uC9DC: ".concat(new Date(change.timestamp), ")"), { tag: 'gameDB' });
                     localStorage.removeItem('gamedb-temp-' + mw.config.get('wgUserName'));
                     common_js_1.rootGameDB.push();
-                }, 
-                //@ts-ignore
-                notifyApiError.bind(null, 'DB2 데이터 동기화에 실패하였습니다. 다음 접속에 다시 시도합니다.', { tag: 'gameDB' }));
+                }, notifyApiError.bind(null, 'DB2 데이터 동기화에 실패하였습니다. 다음 접속에 다시 시도합니다.', { tag: 'gameDB' }));
             }
             var change = JSON.parse(temp);
             if (Number(common_js_1.rootGameDB.get('timestamp')) > change.timestamp)
@@ -246,8 +242,7 @@ function enableDB2() {
                                             : params[key];
                                 });
                         },
-                    }).parse(parseJSON('reset' in data ? '' : storage.get(key)) ||
-                        {}, '[' + data.arg + ']'));
+                    }).parse(parseJSON('reset' in data ? '' : storage.get(key)) || {}, '[' + data.arg + ']'));
                     if (val.length > 2)
                         base[key] = val;
                     if (paramChanged)
@@ -266,15 +261,16 @@ function enableDB2() {
         DataChange.prototype.save = function () {
             var promise;
             var yet = true;
-            var promises = [];
+            var promises;
             if (this.deleteRoot.includes(title))
-                promises.push(common_js_1.rootGameDB.delete(title));
+                common_js_1.rootGameDB.delete(title);
             else if (title in this.root)
-                promises.push(common_js_1.rootGameDB.set(title, this.root[title]));
-            promises.push(storage_js_1.localGameDB.set(this.local));
-            promises.push(storage_js_1.localGameDB.delete(this.deleteLocal));
-            promises.push(storage_js_1.globalGameDB.set(this.global));
-            promises.push(storage_js_1.globalGameDB.delete(this.deleteGlobal));
+                common_js_1.rootGameDB.set(title, this.root[title]);
+            storage_js_1.localGameDB.set(this.local);
+            storage_js_1.localGameDB.delete(this.deleteLocal);
+            storage_js_1.globalGameDB.set(this.global);
+            storage_js_1.globalGameDB.delete(this.deleteGlobal);
+            promises = [common_js_1.rootGameDB.push(), storage_js_1.localGameDB.push(), storage_js_1.globalGameDB.push()];
             promise = $.when.apply(null, promises);
             promise.then(function () {
                 yet = false;
@@ -335,8 +331,8 @@ function enableDB2() {
                 .each(function () {
                 var href;
                 /*
-                clear: 기존 파라미터 넘겨주지 않음
-            */
+                    clear: 기존 파라미터 넘겨주지 않음
+                */
                 if ('clear' in this.dataset) {
                     href = new URL(location.href);
                     href.search = '';
