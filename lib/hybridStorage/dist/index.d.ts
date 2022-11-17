@@ -1,2 +1,3 @@
-import type { SyncableStorage } from './common';
-export = SyncableStorage;
+import { SyncableStorage } from './common';
+declare const _default: SyncableStorage<mw.Map<any> | Storage>;
+export = _default;

@@ -1,12 +1,6 @@
 // 위키 문법을 통해 DB2 저장소 제어
 import { localGameDB, globalGameDB } from './storage.js';
-import {
-    rootGameDB as _rootGameDB,
-    encode,
-    decode,
-    getLocalNamespace,
-    SyncableStorage,
-} from './common.js';
+import { rootGameDB, getLocalNamespace, SyncableStorage } from './common.js';
 
 import CGI2Parser = require('ext.gadget.CGI2-parser');
 
@@ -28,8 +22,7 @@ function enableDB2() {
     const title = getLocalNamespace();
     const useCGIProtect = Boolean(document.getElementsByClassName('protectCGI')[0]);
     const currentSearch = useCGIProtect
-        ? //@ts-ignore
-          (parseJSON(sessionStorage.getItem('protectCGI')) as
+        ? (parseJSON(sessionStorage.getItem('protectCGI') as string) as
               | Record<string, string>
               | undefined)
         : geturlSearch();
@@ -58,11 +51,6 @@ function enableDB2() {
         return;
     }
 
-    const rootGameDB = _rootGameDB.copy({
-        encoder: encode,
-        decoder: decode,
-    });
-
     if (temp)
         registerTrigger(function () {
             function save() {
@@ -76,28 +64,26 @@ function enableDB2() {
                     }
                 );
 
-                DataChange.prototype.save
-                    .call(change)
-                    .then<unknown, [string, Object, Object, JQueryXHR] | ['http']>(
-                        function () {
-                            noti = mw.notification.notify(
-                                `DB2 데이터를 동기화하였습니다. (데이터 날짜: ${new Date(
-                                    change.timestamp
-                                )})`,
-                                { tag: 'gameDB' }
-                            );
-                            localStorage.removeItem(
-                                'gamedb-temp-' + mw.config.get('wgUserName')
-                            );
-                            rootGameDB.refresh();
-                        },
-                        //@ts-ignore
-                        notifyApiError.bind(
-                            null,
-                            'DB2 데이터 동기화에 실패하였습니다. 다음 접속에 다시 시도합니다.',
+                DataChange.prototype.save.call(change).then(
+                    function () {
+                        noti = mw.notification.notify(
+                            `DB2 데이터를 동기화하였습니다. (데이터 날짜: ${new Date(
+                                change.timestamp
+                            )})`,
                             { tag: 'gameDB' }
-                        )
-                    );
+                        );
+                        localStorage.removeItem(
+                            'gamedb-temp-' + mw.config.get('wgUserName')
+                        );
+                        rootGameDB.push();
+                    },
+
+                    notifyApiError.bind(
+                        null,
+                        'DB2 데이터 동기화에 실패하였습니다. 다음 접속에 다시 시도합니다.',
+                        { tag: 'gameDB' }
+                    )
+                );
             }
 
             const change: {
@@ -110,7 +96,7 @@ function enableDB2() {
                 timestamp: number;
             } = JSON.parse(temp);
 
-            if (Number(_rootGameDB.get('timestamp')) > change.timestamp)
+            if (Number(rootGameDB.get('timestamp')) > change.timestamp)
                 mw.loader.using('ext.gadget.DB2-controller');
             else save();
         });
@@ -193,8 +179,8 @@ function enableDB2() {
                     if (!(location.search && 'safe' in data)) {
                         Object.assign(
                             this.params,
-                            //@ts-ignore
-                            parseJSON(storage.get(key)),
+
+                            parseJSON(storage.get(key) as string),
                             'fill' in data && this.params
                         );
                         this.paramChanged = true;
@@ -247,7 +233,7 @@ function enableDB2() {
                     val = JSON.stringify(
                         new CGI2Parser<Record<string, string>>({
                             get(args) {
-                                if (typeof args === 'object')
+                                if (args && typeof args === 'object')
                                     Object.entries(
                                         args as Record<string, unknown>
                                     ).forEach(([key, value]) => {
@@ -275,7 +261,7 @@ function enableDB2() {
                                     });
                             },
                             set(args) {
-                                if (typeof args !== 'object')
+                                if (!args || typeof args !== 'object')
                                     throw new TypeError(
                                         `'set' 동작의 유효한 인자 형식은 Object 이지만, ${typeof args} 형식의 ${args}가 입력되었습니다`
                                     );
@@ -298,7 +284,7 @@ function enableDB2() {
                                 });
                             },
                             def(args) {
-                                if (typeof args !== 'object')
+                                if (!args || typeof args !== 'object')
                                     throw new TypeError(
                                         `'def' 동작의 유효한 인자 형식은 Object 이지만, ${typeof args} 형식의 ${args}가 입력되었습니다`
                                     );
@@ -313,7 +299,7 @@ function enableDB2() {
                                 });
                             },
                             sav(args) {
-                                if (typeof args === 'object')
+                                if (args && typeof args === 'object')
                                     Object.entries(
                                         args as Record<string, unknown>
                                     ).forEach(([key, value]) => {
@@ -341,8 +327,9 @@ function enableDB2() {
                                     });
                             },
                         }).parse(
-                            //@ts-ignore
-                            parseJSON('reset' in data ? '' : storage.get(key)) || {},
+                            parseJSON(
+                                'reset' in data ? '' : (storage.get(key) as string)
+                            ) || {},
                             '[' + data.arg + ']'
                         )
                     );
@@ -363,20 +350,21 @@ function enableDB2() {
             }
         }
         save(): PromiseLike<any> {
-            var promise;
-            var yet = true;
-            var promises = [];
+            let promise;
+            let yet = true;
+            let promises: PromiseLike<any>[];
 
-            if (this.deleteRoot.includes(title))
-                promises.push(rootGameDB.delete(title));
+            if (this.deleteRoot.includes(title)) rootGameDB.delete(title);
             else if (title in this.root)
-                promises.push(rootGameDB.set(title, this.root[title] as string));
+                rootGameDB.set(title, this.root[title] as string);
 
-            promises.push(localGameDB.setAll(this.local));
-            promises.push(localGameDB.deleteAll(this.deleteLocal));
+            localGameDB.set(this.local);
+            localGameDB.delete(this.deleteLocal);
 
-            promises.push(globalGameDB.setAll(this.global));
-            promises.push(globalGameDB.deleteAll(this.deleteGlobal));
+            globalGameDB.set(this.global);
+            globalGameDB.delete(this.deleteGlobal);
+
+            promises = [rootGameDB.push(), localGameDB.push(), globalGameDB.push()];
 
             promise = $.when.apply(null, promises);
             promise.then(function () {
@@ -386,7 +374,7 @@ function enableDB2() {
             if (promises.length && !mw.user.isAnon())
                 setTimeout(function () {
                     if (yet) {
-                        _rootGameDB.set('timestamp', String(Date.now()));
+                        rootGameDB.set('timestamp', String(Date.now()));
                         noti = mw.notification.notify(
                             '데이터를 저장하는 중입니다...',
                             {
@@ -419,11 +407,7 @@ function enableDB2() {
                 ) + location.hash;
             instantDone = true;
 
-            if (
-                (instant.params.title && instant.params.title !== currentTitle) ||
-                instant.paramChanged
-            )
-                location.href = url;
+            if (instant.paramChanged) location.href = url;
             else if (noti) noti.close();
         }, handleError);
     }
@@ -462,8 +446,8 @@ function enableDB2() {
                     var href;
 
                     /*
-	                clear: 기존 파라미터 넘겨주지 않음
-	            */
+                        clear: 기존 파라미터 넘겨주지 않음
+                    */
                     if ('clear' in this.dataset) {
                         href = new URL(location.href);
                         href.search = '';

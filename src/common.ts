@@ -23,9 +23,20 @@ export function decode(key: string) {
         key.replace(/_(?=[a-zA-Z0-9]{2})/g, '%').replace(/__/g, '_')
     );
 }
+export const keyEncoder = {
+    encoder: encode,
+    decoder: decode,
+};
+
 export function getLocalNamespace(pagename = mw.config.get('wgPageName') as string) {
-    const [namespace, title] = pagename.split('/')[0].split(':');
-    return `${namespace.replace(/talk|토론/gi, '')}:${title}`;
+    const root = pagename.split('/')[0];
+    if (pagename.includes(':')) {
+        const [namespace, title] = root.split(':');
+        return `${namespace.replace(/talk|토론/gi, '')}:${title}`;
+    } else return `:${root}`;
 }
 
-export const rootGameDB: SyncableStorage = hybridStorage.subset('gameDB-');
+export const rootGameDB: SyncableStorage = hybridStorage.subset(
+    'gameDB-',
+    keyEncoder
+);
