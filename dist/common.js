@@ -32,7 +32,9 @@ exports.keyEncoder = {
 function getLocalNamespace(pagename) {
     if (pagename === void 0) { pagename = mw.config.get('wgPageName'); }
     var title = new mw.Title(pagename).getSubjectPage();
-    return "".concat(title === null || title === void 0 ? void 0 : title.getNamespacePrefix(), ":").concat(title === null || title === void 0 ? void 0 : title.getMainText());
+    if (!title)
+        throw new TypeError("'".concat(pagename, "'\uC740 \uC798\uBABB\uB41C \uC81C\uBAA9\uC778 \uAC83 \uAC19\uC2B5\uB2C8\uB2E4"));
+    return "".concat(title.getNamespacePrefix(), ":").concat(title.getMainText());
 }
 exports.getLocalNamespace = getLocalNamespace;
 exports.rootGameDB = hybridStorage.subset('gameDB-', exports.keyEncoder);
