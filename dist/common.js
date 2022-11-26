@@ -31,13 +31,8 @@ exports.keyEncoder = {
 };
 function getLocalNamespace(pagename) {
     if (pagename === void 0) { pagename = mw.config.get('wgPageName'); }
-    var root = pagename.split('/')[0];
-    if (pagename.includes(':')) {
-        var _a = root.split(':'), namespace = _a[0], title = _a[1];
-        return "".concat(namespace.replace(/talk|토론/gi, ''), ":").concat(title);
-    }
-    else
-        return ":".concat(root);
+    var title = new mw.Title(pagename).getSubjectPage();
+    return "".concat(title === null || title === void 0 ? void 0 : title.getNamespacePrefix(), ":").concat(title === null || title === void 0 ? void 0 : title.getMainText());
 }
 exports.getLocalNamespace = getLocalNamespace;
 exports.rootGameDB = hybridStorage.subset('gameDB-', exports.keyEncoder);

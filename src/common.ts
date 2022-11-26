@@ -29,11 +29,8 @@ export const keyEncoder = {
 };
 
 export function getLocalNamespace(pagename = mw.config.get('wgPageName') as string) {
-    const root = pagename.split('/')[0];
-    if (pagename.includes(':')) {
-        const [namespace, title] = root.split(':');
-        return `${namespace.replace(/talk|토론/gi, '')}:${title}`;
-    } else return `:${root}`;
+    const title = new mw.Title(pagename).getSubjectPage();
+    return `${title?.getNamespacePrefix()}:${title?.getMainText()}`;
 }
 
 export const rootGameDB: SyncableStorage = hybridStorage.subset(
