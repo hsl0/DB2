@@ -2,6 +2,7 @@
   "name": "hybridstorage",
   "version": "2.0.0-alpha.0",
   "description": "로그인시 알아서 서버와 동기화하고 로그아웃시 로컬에 데이터를 안전하게 저장하는 저장소",
+  "type": "module",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
