@@ -31,7 +31,7 @@ export const keyEncoder = {
 export function getLocalNamespace(pagename = mw.config.get('wgPageName')) {
     const title = new mw.Title(pagename).getSubjectPage();
     if (!title) throw new TypeError(`'${pagename}'은 잘못된 제목인 것 같습니다`);
-    return `${title.getNamespacePrefix()}:${title.getMainText()}`;
+    return `${title.getNamespacePrefix().slice(0, -1)}:${title.getMainText()}`;
 }
 
 export const rootGameDB: SyncableStorage = hybridStorage.subset(
