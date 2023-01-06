@@ -34,7 +34,7 @@ function getLocalNamespace(pagename) {
     var title = new mw.Title(pagename).getSubjectPage();
     if (!title)
         throw new TypeError("'".concat(pagename, "'\uC740 \uC798\uBABB\uB41C \uC81C\uBAA9\uC778 \uAC83 \uAC19\uC2B5\uB2C8\uB2E4"));
-    return "".concat(title.getNamespacePrefix(), ":").concat(title.getMainText());
+    return "".concat(title.getNamespacePrefix().slice(0, -1), ":").concat(title.getMainText());
 }
 exports.getLocalNamespace = getLocalNamespace;
 exports.rootGameDB = hybridStorage.subset('gameDB-', exports.keyEncoder);
