@@ -176,7 +176,7 @@ function enableDB2() {
                             safe: 파라미터가 있으면 불러오지 않음
                             fill: 없는 파라미터만 불러옴
                         */
-                    if (!(location.search && 'safe' in data)) {
+                    if (!(location.search && 'safe' in data) && key in storage) {
                         Object.assign(
                             this.params,
 
