@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/hsl0/libertygame-DB2#readme",
   "devDependencies": {
-    "@types/libertygame": "github:hsl0/libertygame-types",
+    "libertygame-types": "github:hsl0/libertygame-types",
     "rollup-plugin-not-microsoft": "github:hsl0/rollup-plugin-not-microsoft",
     "typescript": "^4.5.5"
   },

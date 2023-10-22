@@ -1,4 +1,5 @@
 {
+    "extends": "libertygame-types/recommended.json",
     "compilerOptions": {
         "strict": true,
         "noUnusedLocals": true,
@@ -7,12 +8,7 @@
         "noImplicitReturns": true,
         "noImplicitThis": true,
         "newLine": "lf",
-        "target": "ES5",
-        "forceConsistentCasingInFileNames": true,
         "outDir": "dist",
-        "strictBindCallApply": true,
-        "strictFunctionTypes": true,
-        "strictNullChecks": true,
         "alwaysStrict": true,
         "sourceMap": true,
         "module": "CommonJS",
@@ -25,7 +21,8 @@
         "rootDir": "src"
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "node_modules/libertygame-types"
     ],
     "references": [
         {
