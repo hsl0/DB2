@@ -1,5 +1,10 @@
-/// <reference types="mediawiki/mw" />
-import { SyncableStorage, StorageOrigin, STORAGE, propOptions, PROMISE } from './common';
+import {
+    SyncableStorage,
+    StorageOrigin,
+    STORAGE,
+    propOptions,
+    PROMISE,
+} from './common';
 
 const RESOLVE = Symbol('promise resolver function');
 
@@ -63,23 +68,20 @@ const remoteOrigin = new StorageOrigin<mw.Map>({
 class CloudStorage extends SyncableStorage<mw.Map> {
     protected readonly [STORAGE]!: typeof remoteOrigin;
     private [RESOLVE]!: (p: PromiseLike<any>) => void;
-    protected [PROMISE]: Promise<any> = new Promise(resolve =>
-    {
+    protected [PROMISE]: Promise<any> = new Promise((resolve) => {
         this[RESOLVE] = resolve;
     });
-    
+
     pull() {
         return this[STORAGE].pull();
     }
 
-    push()
-    {
+    push() {
         const result = this[STORAGE].push();
         this[RESOLVE](result);
-        this[PROMISE] = new Promise(resolve =>
-        {
+        this[PROMISE] = new Promise((resolve) => {
             this[RESOLVE] = resolve;
-        })
+        });
         return result;
     }
 }
