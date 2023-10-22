@@ -54,33 +54,6 @@ export interface LocalStorageOriginInit<T> extends StorageOriginInit<T> {
     delete?(this: LocalStorageOrigin<T>, key: string): void;
 }
 
-interface StrictEvent<T extends string> extends Event {
-    type: T;
-}
-
-interface StrictEventTarget<T extends { [_K: string]: Event }> extends EventTarget {
-    addEventListener<_E extends T[_K], _K extends keyof T>(
-        type: _K,
-        callback: ((event: _E) => void) | { handleEvent(event: _E): void } | null,
-        options?: boolean | AddEventListenerOptions
-    ): void;
-    dispatchEvent<
-        _E extends Event,
-        _R extends _E['type'] extends keyof T
-            ? _E extends T[_E['type']]
-                ? boolean
-                : never
-            : never
-    >(
-        event: _E
-    ): _R;
-    removeEventListener<_E extends T[_K], _K extends keyof T>(
-        type: _K,
-        callback: ((event: _E) => void) | { handleEvent(event: _E): void } | null,
-        options?: EventListenerOptions | boolean
-    ): void;
-}
-
 interface StorageOriginBase<T> extends EventTarget, StorageOriginInit<T> {
     keys(): Set<string>;
     get(key: string): string | null;
