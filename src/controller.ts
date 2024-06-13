@@ -20,7 +20,7 @@ function enableDB2() {
     }
 
     const title = getLocalNamespace();
-    const useCGIProtect = Boolean(document.getElementsByClassName('protectCGI')[0]);
+    const useCGIProtect = Boolean(document.getElementById('protectCGI'));
     const currentSearch = useCGIProtect
         ? (parseJSON(sessionStorage.getItem('protectCGI') as string) as
               | Record<string, string>
