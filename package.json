@@ -22,7 +22,7 @@
   "devDependencies": {
     "libertygame-types": "github:hsl0/libertygame-types",
     "rollup-plugin-not-microsoft": "github:hsl0/rollup-plugin-not-microsoft",
-    "typescript": "^4.5.5"
+    "typescript": "^5.4.5"
   },
   "workspaces": [
     "lib/hybridStorage"
