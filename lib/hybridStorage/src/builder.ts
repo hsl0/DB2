@@ -1,8 +1,5 @@
-export const PARENT = Symbol('local storage origin');
-export const MEMBERS = Symbol('member keys');
-export const PULL_PROMISE = Symbol('pull promise object');
-export const PUSH_PROMISE = Symbol('push promise object');
-export const CHANGED = Symbol('changed keys');
+const PARENT = Symbol('local storage origin');
+const MEMBERS = Symbol('member keys');
 
 type AnyFunction<R = any> = (...args: any) => R;
 type DummyFunction = () => void;
@@ -462,9 +459,6 @@ export class HybridStorage<
 {
     protected readonly [PARENT]: P; // 원본이 저장되는 저장소
     protected [MEMBERS]?: Set<K>;
-
-    protected [PUSH_PROMISE]: Promise<any> | null = null;
-    protected [PULL_PROMISE]: Promise<any> | null = null;
 
     constructor(
         parent: O,
