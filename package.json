@@ -21,7 +21,7 @@
   "homepage": "https://github.com/hsl0/libertygame-DB2#readme",
   "devDependencies": {
     "libertygame-types": "github:hsl0/libertygame-types",
-    "typescript": "^4.5.5"
+    "typescript": "^5.7.2"
   },
   "workspaces": [
     "lib/hybridStorage"
