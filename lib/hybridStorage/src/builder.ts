@@ -67,7 +67,7 @@ type DecoratorChain<H, A extends ObjectDecorator<any, any>[]> = A extends [
                     >
                   : [])
           ]
-        : unknown
+        : never
     : A extends []
     ? A
     : never;
