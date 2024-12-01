@@ -1,29 +1,29 @@
 import {
-    SyncableStorage,
-    STORAGE,
-    localOrigin,
+    HybridStorage,
+    PARENT,
+    localStorageOrigin,
     propOptions,
-    PROMISE,
+    PUSH_PROMISE,
 } from './common';
 
-class LocalStorage extends SyncableStorage<Storage> {
-    protected [PROMISE]!: Promise<true>;
-    protected readonly [STORAGE]!: typeof localOrigin;
+class LocalStorage extends HybridStorage<Storage> {
+    protected [PUSH_PROMISE]!: Promise<true>;
+    protected readonly [PARENT]!: typeof localStorageOrigin;
 
     pull() {
-        return this[PROMISE];
+        return this[PUSH_PROMISE];
     }
 
     push() {
-        return this[PROMISE];
+        return this[PUSH_PROMISE];
     }
 }
-LocalStorage.prototype[PROMISE] = Promise.resolve(true);
+LocalStorage.prototype[PUSH_PROMISE] = Promise.resolve(true);
 Object.defineProperties(LocalStorage.prototype, {
-    [STORAGE]: {
-        value: localOrigin,
+    [PARENT]: {
+        value: localStorageOrigin,
         ...propOptions,
     },
 });
 
-export = new LocalStorage() as SyncableStorage<Storage>;
+export = new LocalStorage() as HybridStorage<Storage>;

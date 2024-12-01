@@ -10,12 +10,13 @@
         "outDir": "dist",
         "rootDir": "src",
         "alwaysStrict": true,
+        //"strictFunctionTypes": false, // 권장
         "sourceMap": true,
         "module": "CommonJS",
         "declaration": true,
         "lib": [
             "DOM",
-            "ES2017"
+            "ESNext"
         ],
         "composite": true,
         "downlevelIteration": true

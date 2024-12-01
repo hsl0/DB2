@@ -1,9 +1,10 @@
 import {
-    SyncableStorage,
-    StorageOrigin,
-    STORAGE,
-    propOptions,
-    PROMISE,
+    HybridStorage,
+    PARENT,
+    PUSH_PROMISE,
+    remoteStage,
+    DecoratedRemoteStorage,
+    storagePrefixer,
 } from './common';
 
 const RESOLVE = Symbol('promise resolver function');
@@ -11,85 +12,64 @@ const RESOLVE = Symbol('promise resolver function');
 const api = new mw.Api();
 
 // 미디어위키 options API (mw.user.options) 추상화
-const remoteOrigin = new StorageOrigin<mw.Map>({
-    storage: mw.user.options,
-    needSync: true,
-    namespace: 'userjs-',
-    get(key: string): string | null {
-        return this.stage[key] || this.storage.get(key);
-    },
-    set(key: string, value: string): void {
-        this.stage[key] = value;
-        this.unsaved = true;
-    },
-    delete(key: string) {
-        this.stage[key] = null;
-        this.unsaved = true;
-    },
-    keys(): Set<string> {
-        const keys = new Set(Object.keys(this.storage.get()));
+const remoteOrigin = new DecoratedRemoteStorage(
+    remoteStage({
+        //@ts-ignore 강제로 덮어쓰기
+        initialState: mw.user.options.values,
+        pull() {
+            return api
+                .get(
+                    {
+                        action: 'query',
+                        meta: 'userinfo',
+                        uiprop: 'options',
+                    },
+                    {
+                        cache: false,
+                    }
+                )
+                .then(
+                    (response) =>
+                        response.query.userinfo.options as Record<string, string>
+                );
+        },
+        push(changed: Record<string, string | null>, removed) {
+            for (const key of removed) changed[key] = null;
+            return api.saveOptions(changed);
+        },
+        async onPull(promise) {
+            //@ts-ignore 강제로 덮어쓰기
+            mw.user.options.values = await promise;
+        },
+    }),
+    storagePrefixer('userjs-')
+);
 
-        for (const key in this.stage) {
-            if (this.stage[key] === null) keys.delete(key);
-            else keys.add(key);
-        }
-
-        return keys;
-    },
-    pull(): PromiseLike<void> {
-        return api
-            .get(
-                {
-                    action: 'query',
-                    meta: 'userinfo',
-                    uiprop: 'options',
-                },
-                {
-                    cache: false,
-                }
-            )
-            .then((response) => {
-                //@ts-ignore Access private anyway
-                mw.user.options.values = response.query.userinfo.options;
-            });
-    },
-    push(): JQueryPromise<void> {
-        return api.saveOptions(this.stage).then(
-            () => {
-                this.unsaved = false;
-            },
-            (code: string, info?: Object) => {
-                return $.Deferred().reject(this.stage, code, info);
-            }
-        );
-    },
-});
-
-class CloudStorage extends SyncableStorage<mw.Map> {
-    protected readonly [STORAGE]!: typeof remoteOrigin;
+class CloudStorage extends HybridStorage<mw.Map> {
+    protected readonly [PARENT]!: typeof remoteOrigin;
     private [RESOLVE]!: (p: PromiseLike<any>) => void;
-    protected [PROMISE]: Promise<any> = new Promise((resolve) => {
+    protected [PUSH_PROMISE]: Promise<any> = new Promise((resolve) => {
         this[RESOLVE] = resolve;
     });
 
     pull() {
-        return this[STORAGE].pull();
+        return this[PARENT].pull();
     }
 
     push() {
-        const result = this[STORAGE].push();
+        const result = this[PARENT].push();
         this[RESOLVE](result);
-        this[PROMISE] = new Promise((resolve) => {
+        this[PUSH_PROMISE] = new Promise((resolve) => {
             this[RESOLVE] = resolve;
         });
         return result;
     }
 }
 Object.defineProperties(CloudStorage.prototype, {
-    [STORAGE]: {
+    [PARENT]: {
         value: remoteOrigin,
         ...propOptions,
     },
 });
 
-export = new CloudStorage() as SyncableStorage<mw.Map>;
+export = new CloudStorage() as HybridStorage<mw.Map>;

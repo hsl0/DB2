@@ -1,3 +1,3 @@
-import { SyncableStorage } from './common';
-declare const _default: SyncableStorage<Storage>;
+import { HybridStorage } from './common';
+declare const _default: HybridStorage<Storage>;
 export = _default;

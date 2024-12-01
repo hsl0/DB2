@@ -1,97 +1,98 @@
-export declare const STORAGE: unique symbol;
+export declare const PARENT: unique symbol;
 export declare const MEMBERS: unique symbol;
-export declare const GET_MEMBERS: unique symbol;
-export declare const NAMESPACE: unique symbol;
-export declare const ENCODE_KEY: unique symbol;
-export declare const DECODE_KEY: unique symbol;
-export declare const IS_MY_KEY: unique symbol;
-export declare const PROMISE: unique symbol;
-export declare const propOptions: PropertyDescriptor;
-export interface KeyEncoder {
-    encoder(key: string): string;
-    decoder(key: string): string;
+export declare const PULL_PROMISE: unique symbol;
+export declare const PUSH_PROMISE: unique symbol;
+export declare const CHANGED: unique symbol;
+type AnyFunction<R = any> = (...args: any) => R;
+interface StorageOriginSkeleton {
+    keys: AnyFunction;
+    get: AnyFunction;
+    set: AnyFunction;
+    delete: AnyFunction;
 }
-interface StorageOriginInit<T> {
-    readonly storage: T;
-    readonly needSync: boolean;
-    readonly namespace?: string;
-    keys(this: StorageOrigin<T>): Set<string>;
-    get(this: StorageOrigin<T>, key: string): string | null;
-    set(this: StorageOrigin<T>, key: string, value: string | null): void;
-    delete?(this: StorageOrigin<T>, key: string): void;
+export interface StorageOrigin<K, V> extends StorageOriginSkeleton {
+    keys(): Set<K>;
+    get(key: K): V | null | undefined;
+    set(key: K, value: V): void;
+    delete(key: K): void;
 }
-export interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {
-    readonly needSync: true;
-    push(this: RemoteStorageOrigin<T>): PromiseLike<any>;
-    pull(this: RemoteStorageOrigin<T>): PromiseLike<any>;
-    keys(this: RemoteStorageOrigin<T>): Set<string>;
-    get(this: RemoteStorageOrigin<T>, key: string): string | null;
-    set(this: RemoteStorageOrigin<T>, key: string, value: string | null): void;
-    delete?(this: RemoteStorageOrigin<T>, key: string): void;
+interface RemoteStorageOriginSkeletonPart {
+    push: AnyFunction;
+    pull: AnyFunction;
 }
-export interface LocalStorageOriginInit<T> extends StorageOriginInit<T> {
-    readonly needSync: false;
-    keys(this: LocalStorageOrigin<T>): Set<string>;
-    get(this: LocalStorageOrigin<T>, key: string): string | null;
-    set(this: LocalStorageOrigin<T>, key: string, value: string | null): void;
-    delete?(this: LocalStorageOrigin<T>, key: string): void;
+export interface RemoteStorageOriginPart extends RemoteStorageOriginSkeletonPart {
+    push(): Promise<void>;
+    pull(): Promise<void>;
 }
-interface StorageOriginBase<T> extends EventTarget, StorageOriginInit<T> {
-    keys(): Set<string>;
-    get(key: string): string | null;
-    set(key: string, value: string | null): void;
+type RemoteStorageOrigin<K extends string | number, V> = RemoteStorageOriginPart & StorageOrigin<K, V>;
+type ObjectDecorator<O, R> = (origin: O) => R;
+type SameTypeDecorator<T> = ObjectDecorator<T, T>;
+type UnionTypeDecorator<O, R> = ObjectDecorator<O, O & R>;
+type StorageDecorator<O extends StorageOriginSkeleton, R extends StorageOriginSkeleton = O> = ObjectDecorator<O, R>;
+type DecoratorChain<H, A extends ObjectDecorator<any, any>[]> = A extends [
+    infer D,
+    ...infer N
+] ? D extends ObjectDecorator<any, any> ? [
+    ObjectDecorator<H, any> extends D ? D : never,
+    ...(N extends ObjectDecorator<any, any>[] ? DecoratorChain<SameTypeDecorator<H> extends D ? H : UnionTypeDecorator<H, unknown> extends D ? H & ReturnType<D> : ReturnType<D>, N> : never)
+] : never : A extends [] ? A : never;
+export interface RemoteStageInit {
+    initialState?: Record<string, string>;
+    push(changed: Record<string, string>, removed: Set<string>): Promise<void>;
+    pull(): Promise<Record<string, string>>;
+    onPush?: (promise: Promise<void>) => void;
+    onPull?: (promise: Promise<Record<string, string>>) => void;
+}
+export declare const remoteStage: (init: RemoteStageInit) => {
+    keys: () => Set<string>;
+    get: (key: string) => string | null;
+    set(key: string, value: string): void;
     delete(key: string): void;
-}
-export interface RemoteStorageOrigin<T> extends StorageOriginBase<T>, RemoteStorageOriginInit<T> {
-    stage: Record<string, string | null>;
-    unsaved: boolean;
-    needSync: true;
-    delete(key: string): void;
-}
-export interface LocalStorageOrigin<T> extends StorageOriginBase<T>, LocalStorageOriginInit<T> {
-    needSync: false;
-    delete(key: string): void;
-}
-type StorageOrigin<T> = RemoteStorageOrigin<T> | LocalStorageOrigin<T>;
-declare const StorageOrigin: {
-    new <T>(init: RemoteStorageOriginInit<T>): RemoteStorageOrigin<T>;
-    new <T_1>(init: LocalStorageOriginInit<T_1>): LocalStorageOrigin<T_1>;
+    pull(): Promise<void>;
+    push(): Promise<void>;
 };
-export { StorageOrigin };
-export declare const localOrigin: LocalStorageOrigin<Storage>;
-export declare abstract class SyncableStorage<T> {
-    protected abstract readonly [STORAGE]: StorageOrigin<T>;
-    protected readonly [MEMBERS]: Set<string>;
-    protected readonly [NAMESPACE]: string;
-    protected abstract [PROMISE]: PromiseLike<any>;
-    readonly isRoot: boolean;
-    readonly hasRemote: boolean;
-    readonly keyEncoded: boolean;
-    constructor(parent?: SyncableStorage<T>, namespace?: string, keyEncoder?: KeyEncoder);
-    get unsaved(): boolean;
-    get size(): number;
-    clear(): PromiseLike<any>;
-    delete(key: string): PromiseLike<any>;
-    delete(keys: string[]): PromiseLike<any>;
-    delete(...keys: string[]): PromiseLike<any>;
-    forEach(callbackfn: (value: string, key: string, map: this) => void, thisArg?: any): void;
-    get(key: string): string | null;
-    getAll(keys: string[]): Record<string, string>;
-    getAll(...keys: string[]): Record<string, string>;
-    has(key: string): boolean;
-    has(keys: string[]): boolean;
-    has(...keys: string[]): boolean;
-    set(key: string, value: string): PromiseLike<any>;
-    set(entries: Record<string, string>): PromiseLike<any>;
-    keys(): string[];
-    values(): Record<string, string>;
-    subset(namespace: string, keyEncoder?: KeyEncoder): this;
-    pull(): PromiseLike<any>;
-    push(): PromiseLike<any>;
-    encodeKey(key: string): string;
-    decodeKey(key: string): string;
-    protected [ENCODE_KEY](key: string): string;
-    protected [DECODE_KEY](key: string): string;
-    protected [IS_MY_KEY](key: string): boolean;
-    protected [GET_MEMBERS](parentMembers?: Set<string> | string[]): void;
+export interface StorageEncoderInit<E extends string, D extends string> {
+    encodeKey: (key: D) => E;
+    decodeKey: (key: E) => D;
 }
+export declare const storageEncoder: <E extends string, D extends string>({ encodeKey, decodeKey, }: StorageEncoderInit<E, D>) => <O extends StorageOrigin<E, string>>(storage: O) => StorageOrigin<D, string> & Omit<O, keyof StorageOrigin<E, string>>;
+export declare const storagePrefixer: <P extends string>(prefix: P) => <K extends O extends StorageOrigin<infer S, string> ? string extends S ? string : Extract<S, `${P}${string}`> extends `${P}${infer K_1}` ? K_1 : never : never, O extends StorageOrigin<string, string>>(storage: O) => StorageOrigin<K, string> & Omit<O, keyof StorageOrigin<string, string>>;
+export declare const webStorageOrigin: (storage: Storage) => StorageOrigin<string, string>;
+export declare const localStorageOrigin: StorageOrigin<string, string>;
+export declare class HybridStorage<O extends Partial<RemoteStorageOrigin<string, string>>, D extends StorageDecorator<any, any>[], P extends RemoteStorageOrigin<string, string>, K extends P extends RemoteStorageOrigin<infer K, string> ? K : never> implements RemoteStorageOrigin<string, string> {
+    protected readonly [PARENT]: P;
+    protected [MEMBERS]?: Set<K>;
+    protected [PUSH_PROMISE]: Promise<any> | null;
+    protected [PULL_PROMISE]: Promise<any> | null;
+    constructor(parent: O, ...decorators: D & DecoratorChain<NoInfer<O>, NoInfer<D>> & ([
+        ...ObjectDecorator<any, any>[],
+        ObjectDecorator<any, RemoteStorageOrigin<string, string>>
+    ] | []));
+    static decorator<O extends Partial<RemoteStorageOrigin<string, string>>>(parent: O): HybridStorage<O, [], RemoteStorageOrigin<string, string>, string>;
+    get size(): number;
+    clear(): void;
+    delete(...keys: K[]): void;
+    forEach(callbackfn: (value: string, key: K, map: this) => void, thisArg?: any): void;
+    get(key: K): string | null;
+    getAll<D extends Record<K, unknown>>(defaults: D): {
+        [K in keyof D]: D[K] | string;
+    };
+    getAll<T extends Iterable<K>>(keys: T): {
+        [K in keyof T]: string | null;
+    };
+    getAll(): Record<K, string>;
+    has(key: string): key is K;
+    hasAll(...keys: string[]): typeof keys extends K[] ? true : false;
+    hasSome<T extends string>(...keys: T[]): T & K extends never ? false : true;
+    set(key: K, value: string): void;
+    set(entries: Record<K, string | null>): void;
+    keys(): Set<K>;
+    decorate<D extends StorageDecorator<any, any>[]>(...decorators: D & DecoratorChain<NoInfer<O>, NoInfer<D>> & [
+        ...ObjectDecorator<any, any>[],
+        ObjectDecorator<any, RemoteStorageOrigin<string, string>>
+    ]): HybridStorage<this, any, RemoteStorageOrigin<string, string>, string>;
+    pull(): Promise<any>;
+    push(): Promise<void>;
+    sync(): Promise<any>;
+}
+export {};

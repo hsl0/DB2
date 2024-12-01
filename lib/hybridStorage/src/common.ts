@@ -1,569 +1,634 @@
-export const STORAGE = Symbol('storage');
+export const PARENT = Symbol('local storage origin');
 export const MEMBERS = Symbol('member keys');
-export const GET_MEMBERS = Symbol('get members');
-export const NAMESPACE = Symbol('namespace');
-export const ENCODE_KEY = Symbol('encode key');
-export const DECODE_KEY = Symbol('decode key');
-export const IS_MY_KEY = Symbol('Is it my key?');
-export const PROMISE = Symbol('promise object');
+export const PULL_PROMISE = Symbol('pull promise object');
+export const PUSH_PROMISE = Symbol('push promise object');
+export const CHANGED = Symbol('changed keys');
 
-// 런타임 readonly PropertyDescriptor 옵션
-export const propOptions: PropertyDescriptor = {
-    configurable: false,
-    enumerable: true,
-    writable: false,
-};
+type AnyFunction<R = any> = (...args: any) => R;
+type DummyFunction = () => void;
+const DummyFunction: DummyFunction = () => {};
 
-// 인코더/디코더 묶음 객체
-export interface KeyEncoder {
-    encoder(key: string): string;
-    decoder(key: string): string;
+type Key = string | number | symbol;
+
+interface StorageOriginSkeleton {
+    keys: AnyFunction;
+    get: AnyFunction;
+    set: AnyFunction;
+    delete: AnyFunction;
 }
 
-// 공통 StorageOrigin 생성 인자
-interface StorageOriginInit<T> {
-    readonly storage: T;
-    readonly needSync: boolean;
-    readonly namespace?: string;
-    keys(this: StorageOrigin<T>): Set<string>;
-    get(this: StorageOrigin<T>, key: string): string | null;
-    set(this: StorageOrigin<T>, key: string, value: string | null): void;
-    delete?(this: StorageOrigin<T>, key: string): void;
+export interface StorageOrigin<K, V> extends StorageOriginSkeleton {
+    keys(): Set<K>;
+    get(key: K): V | null | undefined;
+    set(key: K, value: V): void;
+    delete(key: K): void;
 }
 
 // 원격 전용 StorageOrigin 생성 인자
-export interface RemoteStorageOriginInit<T> extends StorageOriginInit<T> {
-    readonly needSync: true;
-
-    push(this: RemoteStorageOrigin<T>): PromiseLike<any>;
-    pull(this: RemoteStorageOrigin<T>): PromiseLike<any>;
-
-    keys(this: RemoteStorageOrigin<T>): Set<string>;
-    get(this: RemoteStorageOrigin<T>, key: string): string | null;
-    set(this: RemoteStorageOrigin<T>, key: string, value: string | null): void;
-    delete?(this: RemoteStorageOrigin<T>, key: string): void;
+interface RemoteStorageOriginSkeletonPart {
+    push: AnyFunction;
+    pull: AnyFunction;
 }
 
-// 로컬 전용 StorageOrigin 생성 인자
-export interface LocalStorageOriginInit<T> extends StorageOriginInit<T> {
-    readonly needSync: false;
+type RemoteStorageOriginSkeleton = StorageOriginSkeleton &
+    RemoteStorageOriginSkeletonPart;
 
-    keys(this: LocalStorageOrigin<T>): Set<string>;
-    get(this: LocalStorageOrigin<T>, key: string): string | null;
-    set(this: LocalStorageOrigin<T>, key: string, value: string | null): void;
-    delete?(this: LocalStorageOrigin<T>, key: string): void;
+export interface RemoteStorageOriginPart extends RemoteStorageOriginSkeletonPart {
+    push(): Promise<void>;
+    pull(): Promise<void>;
 }
 
-interface StorageOriginBase<T> extends EventTarget, StorageOriginInit<T> {
-    keys(): Set<string>;
-    get(key: string): string | null;
-    set(key: string, value: string | null): void;
-    delete(key: string): void;
-}
-export interface RemoteStorageOrigin<T>
-    extends StorageOriginBase<T>,
-        RemoteStorageOriginInit<T> {
-    stage: Record<string, string | null>;
-    unsaved: boolean;
+type RemoteStorageOrigin<K extends string | number, V> = RemoteStorageOriginPart &
+    StorageOrigin<K, V>;
 
-    needSync: true;
-    delete(key: string): void;
-}
-export interface LocalStorageOrigin<T>
-    extends StorageOriginBase<T>,
-        LocalStorageOriginInit<T> {
-    needSync: false;
-    delete(key: string): void;
-}
+type ObjectDecorator<O, R> = (origin: O) => R;
+type SameTypeDecorator<T> = ObjectDecorator<T, T>;
+type UnionTypeDecorator<O, R> = ObjectDecorator<O, O & R>;
 
-// 원본 저장소 API 추상화 계층
-type StorageOrigin<T> = RemoteStorageOrigin<T> | LocalStorageOrigin<T>;
-const StorageOrigin = class StorageOrigin<T>
-    extends EventTarget
-    implements StorageOriginBase<T>
-{
-    readonly storage: T;
-    stage?: Record<string, string | null>;
-    unsaved?: boolean;
-    readonly needSync: boolean;
-    readonly namespace?: string;
+type StorageDecorator<
+    O extends StorageOriginSkeleton,
+    R extends StorageOriginSkeleton = O
+> = ObjectDecorator<O, R>;
 
-    constructor(init: RemoteStorageOriginInit<T> | LocalStorageOriginInit<T>) {
-        super();
+type DecoratorChain<H, A extends ObjectDecorator<any, any>[]> = A extends [
+    infer D,
+    ...infer N
+]
+    ? D extends ObjectDecorator<any, any>
+        ? [
+              ObjectDecorator<H, any> extends D ? D : never,
+              ...(N extends ObjectDecorator<any, any>[]
+                  ? DecoratorChain<
+                        SameTypeDecorator<H> extends D
+                            ? H
+                            : UnionTypeDecorator<H, unknown> extends D
+                            ? H & ReturnType<D>
+                            : ReturnType<D>,
+                        N
+                    >
+                  : never)
+          ]
+        : never
+    : A extends []
+    ? A
+    : never;
 
-        this.storage = init.storage;
-        this.needSync = init.needSync;
-        this.namespace = init.namespace;
+type RemoteStorageDecorator<
+    O extends RemoteStorageOriginSkeleton,
+    R extends RemoteStorageOriginSkeleton = O
+> = StorageDecorator<O, R>;
 
-        this.get = init.get;
-        this.set = init.set;
-        this.keys = init.keys;
-        if (init.delete) this.delete = init.delete;
-
-        if (init.needSync) {
-            (this as RemoteStorageOrigin<T>).stage = {};
-            (this as RemoteStorageOrigin<T>).unsaved = false;
-            (this as RemoteStorageOrigin<T>).pull = init.pull;
-            (this as RemoteStorageOrigin<T>).push = init.push;
-        }
+function bindMethods<T>(obj: T, context: T = obj): T {
+    const copied: Partial<T> = {};
+    for (const key of [
+        ...Object.getOwnPropertyNames(obj),
+        ...Object.getOwnPropertySymbols(obj),
+    ] as (keyof T)[]) {
+        const value = obj[key];
+        copied[key] = typeof value === 'function' ? value.bind(context) : value;
     }
-    get: (key: string) => string | null;
-    set: (key: string, value: string) => void;
-    keys: () => Set<string>;
-    delete(key: string): void {
-        this.set(key, null as any);
+    return copied as T;
+}
+
+function decorate<O, R>(origin: O, ...decorators: [ObjectDecorator<O, R>]): R;
+function decorate<O, R, I1>(
+    origin: O,
+    ...decorators: [ObjectDecorator<O, I1>, ObjectDecorator<I1, R>]
+): R;
+function decorate<O, R, I1, I2>(
+    origin: O,
+    ...decorators: [
+        ObjectDecorator<O, I1>,
+        ObjectDecorator<I1, I2>,
+        ObjectDecorator<I2, R>
+    ]
+): R;
+function decorate<O, R, I1, I2, I3>(
+    origin: O,
+    ...decorators: [
+        ObjectDecorator<O, I1>,
+        ObjectDecorator<I1, I2>,
+        ObjectDecorator<I2, I3>,
+        ObjectDecorator<I3, R>
+    ]
+): R;
+function decorate<O, R, I1, I2, I3, I4>(
+    origin: O,
+    ...decorators: [
+        ObjectDecorator<O, I1>,
+        ObjectDecorator<I1, I2>,
+        ObjectDecorator<I2, I3>,
+        ObjectDecorator<I3, I4>,
+        ObjectDecorator<I4, R>
+    ]
+): R;
+function decorate<O, R, I1, I2, I3, I4, I5>(
+    origin: O,
+    ...decorators: [
+        ObjectDecorator<O, I1>,
+        ObjectDecorator<I1, I2>,
+        ObjectDecorator<I2, I3>,
+        ObjectDecorator<I3, I4>,
+        ObjectDecorator<I4, I5>,
+        ObjectDecorator<I5, R>
+    ]
+): R;
+function decorate<O, R, I1, I2, I3, I4, I5, I6>(
+    origin: O,
+    ...decorators: [
+        ObjectDecorator<O, I1>,
+        ObjectDecorator<I1, I2>,
+        ObjectDecorator<I2, I3>,
+        ObjectDecorator<I3, I4>,
+        ObjectDecorator<I4, I5>,
+        ObjectDecorator<I5, I6>,
+        ObjectDecorator<I6, R>
+    ]
+): R;
+function decorate<O, R, I1, I2, I3, I4, I5, I6, I7>(
+    origin: O,
+    ...decorators: [
+        ObjectDecorator<O, I1>,
+        ObjectDecorator<I1, I2>,
+        ObjectDecorator<I2, I3>,
+        ObjectDecorator<I3, I4>,
+        ObjectDecorator<I4, I5>,
+        ObjectDecorator<I5, I6>,
+        ObjectDecorator<I6, I7>,
+        ObjectDecorator<I7, R>
+    ]
+): R;
+function decorate<O, R, I1, I2, I3, I4, I5, I6, I7, I8>(
+    origin: O,
+    ...decorators: [
+        ObjectDecorator<O, I1>,
+        ObjectDecorator<I1, I2>,
+        ObjectDecorator<I2, I3>,
+        ObjectDecorator<I3, I4>,
+        ObjectDecorator<I4, I5>,
+        ObjectDecorator<I5, I6>,
+        ObjectDecorator<I6, I7>,
+        ObjectDecorator<I7, I8>,
+        ObjectDecorator<I8, R>
+    ]
+): R;
+function decorate<O, R, I1, I2, I3, I4, I5, I6, I7, I8, I9>(
+    origin: O,
+    ...decorators: [
+        ObjectDecorator<O, I1>,
+        ObjectDecorator<I1, I2>,
+        ObjectDecorator<I2, I3>,
+        ObjectDecorator<I3, I4>,
+        ObjectDecorator<I4, I5>,
+        ObjectDecorator<I5, I6>,
+        ObjectDecorator<I6, I7>,
+        ObjectDecorator<I7, I8>,
+        ObjectDecorator<I8, I9>,
+        ObjectDecorator<I9, R>
+    ]
+): R;
+function decorate<O, R, D extends ObjectDecorator<any, any>[]>(
+    origin: O,
+    ...decorators: D &
+        DecoratorChain<NoInfer<O>, NoInfer<D>> &
+        ([...ObjectDecorator<any, any>[], ObjectDecorator<any, R>] | [])
+): R;
+function decorate<O, R, D extends ObjectDecorator<any, any>[]>(
+    origin: O,
+    ...decorators: D &
+        DecoratorChain<NoInfer<O>, NoInfer<D>> &
+        ([...ObjectDecorator<any, any>[], ObjectDecorator<any, R>] | [])
+): R {
+    let decorated: O | D[keyof D] = bindMethods(origin);
+
+    for (const deco of decorators as D) {
+        decorated = deco(bindMethods(decorated));
     }
-    push?(): PromiseLike<any>;
-    pull?(): PromiseLike<any>;
-} as {
-    new <T>(init: RemoteStorageOriginInit<T>): RemoteStorageOrigin<T>;
-    new <T>(init: LocalStorageOriginInit<T>): LocalStorageOrigin<T>;
+
+    return decorated as R;
+}
+
+const recordOrigin = <K extends Key, V>(record: Record<K, V>) =>
+    ({
+        keys: () => new Set(Object.keys(record) as K[]),
+        get: (key) => record[key] ?? null,
+        set(key, value) {
+            record[key] = value;
+        },
+        delete(key) {
+            delete record[key];
+        },
+    } satisfies StorageOrigin<K, V>);
+export interface RemoteStageInit {
+    initialState?: Record<string, string>;
+
+    push(changed: Record<string, string>, removed: Set<string>): Promise<void>;
+    pull(): Promise<Record<string, string>>;
+
+    onPush?: (promise: Promise<void>) => void;
+    onPull?: (promise: Promise<Record<string, string>>) => void;
+}
+export const remoteStage = (init: RemoteStageInit) => {
+    let state = recordOrigin(init.initialState ?? {});
+    let changedKeys = new Set<string>();
+
+    return {
+        keys: state.keys,
+        get: state.get,
+        set(key, value) {
+            state.set(key, value);
+            changedKeys.add(key);
+        },
+        delete(key) {
+            state.delete(key);
+            changedKeys.add(key);
+        },
+        pull() {
+            const waitingPull = Promise.resolve()
+                .then(init.pull)
+                .then((data) => {
+                    const newState = { ...data };
+
+                    for (const key of changedKeys) {
+                        const value = state.get(key);
+                        if (value) newState[key] = value;
+                        else delete newState[key];
+                    }
+
+                    state = recordOrigin<string, string>(newState);
+
+                    return newState;
+                });
+            init.onPull?.(waitingPull);
+            return waitingPull.then(() => {});
+        },
+        push() {
+            const waitingPush = Promise.resolve().then(() => {
+                let oldChangedKeys = changedKeys;
+                changedKeys = new Set();
+                const changed = Object.fromEntries(
+                    oldChangedKeys
+                        .union(state.keys())
+                        .values()
+                        .map((key) => [key, state.get(key)!])
+                );
+                const removed = oldChangedKeys.difference(state.keys());
+                return init.push(changed, removed);
+            });
+            init.onPush?.(waitingPush);
+            return waitingPush;
+        },
+    } satisfies RemoteStorageOrigin<string, string>;
 };
-export { StorageOrigin };
 
-// localStorage API 추상화
-export const localOrigin = new StorageOrigin<Storage>({
-    storage: localStorage,
-    needSync: false,
-    set(key: string, value: string): void {
-        this.storage.setItem(key, value);
-    },
-    delete(key: string): void {
-        this.storage.removeItem(key);
-    },
-    get(key: string): string | null {
-        return this.storage.getItem(key);
-    },
-    keys() {
-        return new Set(Object.keys(this.storage));
-    },
+const cacheSyncPromise = <O extends RemoteStorageOriginPart>(storage: O): O => {
+    let pushPromise: Promise<void> | null = null;
+    let pullPromise: Promise<void> | null = null;
+
+    return {
+        ...storage,
+        push() {
+            if (!pushPromise)
+                pushPromise = storage.push().finally(() => {
+                    pushPromise = null;
+                });
+
+            return pushPromise;
+        },
+        pull() {
+            if (!pullPromise)
+                pullPromise = storage.pull().finally(() => {
+                    pullPromise = null;
+                });
+            return pullPromise;
+        },
+    };
+};
+
+const dummyRemoteDecorator = <O>(local: O) =>
+    ({
+        ...local,
+        push: () => Promise.resolve(),
+        pull: () => Promise.resolve(),
+    } satisfies O & RemoteStorageOriginSkeletonPart);
+
+interface BackupUploadsInit {
+    backupStorage: StorageOrigin<string, string>;
+    prefix: string;
+    profile: string;
+    merger?: (
+        local: Record<string, string | null>,
+        remote: Record<string, string | null>
+    ) => Record<string, string | null>;
+
+    onConflict?(
+        local: Record<string, string>,
+        remote: Record<string, string>
+    ): Promise<Record<string, string>>;
+}
+
+const backupUploads =
+    ({ backupStorage, prefix, profile, merger }: BackupUploadsInit) =>
+    (
+        origin: RemoteStorageOrigin<string, string>
+    ): RemoteStorageOrigin<string, string> => {
+        backupStorage = decorate(backupStorage, storagePrefixer(prefix));
+        let changedKeys = new Set<string>();
+
+        function merge() {
+            if (!merger) return;
+
+            const saved = decorate(backupStorage, storagePrefixer(profile + '/'));
+
+            if (new Set(saved.keys()).size < 0) return;
+
+            const latest = Math.max(...[...saved.keys()].map((key) => Number(key)));
+            const stage: Record<string, string | null> = JSON.parse(
+                saved.get(String(latest))!
+            );
+
+            const remote: Record<string, string | null> = Object.fromEntries(
+                [...origin.keys()].map((key) => [key, origin.get(key) ?? null])
+            );
+
+            const merged: Record<string, string | null> = merger(stage, remote);
+            for (const [key, value] of Object.entries(merged)) {
+                if (value) origin.set(key, value);
+                else origin.delete(key);
+            }
+        }
+
+        merge();
+
+        return {
+            ...origin,
+            set(key, value) {
+                origin.set(key, value);
+                changedKeys.add(key);
+            },
+            delete(key) {
+                origin.delete(key);
+                changedKeys.add(key);
+            },
+            push: () => {
+                const promise = origin.push();
+
+                const stage = Object.fromEntries(
+                    changedKeys.values().map((key) => [key, origin.get(key) ?? null])
+                );
+                const key = `${profile}/${Date.now()}`;
+
+                backupStorage.set(key, JSON.stringify(stage));
+
+                promise.then(() => {
+                    backupStorage.delete(key);
+                });
+
+                return promise;
+            },
+            async pull() {
+                await origin.pull();
+                merge();
+            },
+        };
+    };
+
+export interface StorageEncoderInit<E extends string, D extends string> {
+    encodeKey: (key: D) => E;
+    decodeKey: (key: E) => D;
+}
+
+export const storageEncoder =
+    <E extends string, D extends string>({
+        encodeKey,
+        decodeKey,
+    }: StorageEncoderInit<E, D>) =>
+    <O extends StorageOrigin<E, string>>(
+        storage: O
+    ): StorageOrigin<D, string> & Omit<O, keyof StorageOrigin<E, string>> => ({
+        ...storage,
+        keys: () => new Set(storage.keys().values().map(decodeKey)),
+        get: (key) => storage.get(encodeKey(key)),
+        set: (key, value) => storage.set(encodeKey(key), value),
+        delete: (key) => storage.delete(encodeKey(key)),
+    });
+
+export const storagePrefixer =
+    <P extends string>(prefix: P) =>
+    <
+        K extends O extends StorageOrigin<infer S, string>
+            ? string extends S
+                ? string
+                : Extract<S, `${P}${string}`> extends `${P}${infer K}`
+                ? K
+                : never
+            : never,
+        O extends StorageOrigin<string, string>
+    >(
+        storage: O
+    ): StorageOrigin<K, string> & Omit<O, keyof StorageOrigin<string, string>> => ({
+        ...storage,
+        keys: () =>
+            new Set(
+                storage
+                    .keys()
+                    .values()
+                    .filter((key): key is `${P}${K}` => key.startsWith(prefix))
+                    .map((key) => key.slice(prefix.length) as K)
+            ),
+        get: (key) => storage.get(prefix + key),
+        set: (key, value) => storage.set(prefix + key, value),
+        delete: (key) => storage.delete(prefix + key),
+    });
+
+// web Storage API 추상화
+export const webStorageOrigin = (
+    storage: Storage
+): StorageOrigin<string, string> => ({
+    set: (key, value) => storage.setItem(key, value),
+    delete: (key: string) => storage.removeItem(key),
+    get: (key: string) => storage.getItem(key),
+    keys: () => new Set(Object.keys(storage)),
 });
 
-// 온라인/오프라인 공통 저장소 클래스
-export abstract class SyncableStorage<T> {
-    protected abstract readonly [STORAGE]: StorageOrigin<T>; // 원본이 저장되는 저장소
-    protected readonly [MEMBERS]: Set<string>; // 인코딩을 거친 원본 저장소상의 소속 키
+export const localStorageOrigin = webStorageOrigin(localStorage);
 
-    protected readonly [NAMESPACE]: string; // (하위 저장소의 경우) 원본 저장소상 소속 키의 접두어
-    protected abstract [PROMISE]: PromiseLike<any>; // 다음 push 결과값을 반환할 promise
-    readonly isRoot: boolean; // 최상위 저장소 여부
-    readonly hasRemote: boolean; // 동기화될 클라우드 저장소 존재 여부
-    readonly keyEncoded: boolean; // 원본 키가 인코딩을 거쳤는지 여부
+// 온라인/오프라인 공통 저장소 클래스
+export class HybridStorage<
+    O extends Partial<RemoteStorageOrigin<string, string>>,
+    D extends StorageDecorator<any, any>[],
+    P extends RemoteStorageOrigin<string, string>,
+    K extends P extends RemoteStorageOrigin<infer K, string> ? K : never
+> implements RemoteStorageOrigin<string, string>
+{
+    protected readonly [PARENT]: P; // 원본이 저장되는 저장소
+    protected [MEMBERS]?: Set<K>;
+
+    protected [PUSH_PROMISE]: Promise<any> | null = null;
+    protected [PULL_PROMISE]: Promise<any> | null = null;
 
     constructor(
-        parent?: SyncableStorage<T>,
-        namespace = '',
-        keyEncoder?: KeyEncoder
+        parent: O,
+        ...decorators: D &
+            DecoratorChain<NoInfer<O>, NoInfer<D>> &
+            (
+                | [
+                      ...ObjectDecorator<any, any>[],
+                      ObjectDecorator<any, RemoteStorageOrigin<string, string>>
+                  ]
+                | []
+            )
     ) {
-        if (keyEncoder) {
-            if (!keyEncoder.encoder || !keyEncoder.decoder)
-                throw new TypeError('Encoder and decoder must be included');
-
-            this.encodeKey = keyEncoder.encoder;
-            this.decodeKey = keyEncoder.decoder;
-            this.keyEncoded = true;
-        } else this.keyEncoded = false;
-
-        this.isRoot = !parent;
-        this.hasRemote ??= this[STORAGE].needSync;
-        this[NAMESPACE] =
-            (parent ? parent[NAMESPACE] : this[STORAGE].namespace || '') + namespace;
-
-        this[MEMBERS] = new Set();
-        this[GET_MEMBERS](parent?.[MEMBERS] || this[STORAGE].keys());
-
-        Object.defineProperties(this, {
-            isRoot: propOptions,
-            hasRemote: propOptions,
-            keyEncoded: propOptions,
-            [NAMESPACE]: propOptions,
-        });
+        this[PARENT] = decorate(parent, ...(decorators as any));
     }
 
-    // 저장이 완료되지 않았는지 여부
-    get unsaved(): boolean {
-        return Boolean((this[STORAGE] as any).unsaved);
+    static decorator<O extends Partial<RemoteStorageOrigin<string, string>>>(
+        parent: O
+    ) {
+        return new HybridStorage(parent);
     }
 
     // 소속 키의 수
     get size(): number {
-        return this[MEMBERS].size;
+        return this.keys().size;
     }
 
     // 저장소 영역 초기화
-    clear(): PromiseLike<any> {
-        if (this.isRoot) throw new TypeError('Root storage cannot be cleared');
-
-        this[MEMBERS].forEach((key) => {
-            this[STORAGE].delete(key);
+    clear(): void {
+        this.keys().forEach((key) => {
+            this.delete(key);
         });
-        this[MEMBERS].clear();
-
-        return this[PROMISE];
+        this[MEMBERS]?.clear();
     }
 
     // 키 삭제
-    delete(key: string): PromiseLike<any>;
-    delete(keys: string[]): PromiseLike<any>;
-    delete(...keys: string[]): PromiseLike<any>;
-    delete(...keys: [string[]] | string[]) {
-        if (Array.isArray(keys[0])) keys = keys[0];
-
-        (keys as string[]).forEach((key) => {
-            key = this[ENCODE_KEY](key);
-            if (this[MEMBERS].has(key)) {
-                this[STORAGE].delete(key);
-                this[MEMBERS].delete(key);
-            }
-        });
-
-        return this[PROMISE];
+    delete(...keys: K[]): void {
+        for (const key of keys) {
+            this[PARENT].delete(key);
+            this[MEMBERS]?.delete(key);
+        }
     }
 
     // 모든 키와 값에 대해 일괄 작업 수행
     forEach(
-        callbackfn: (value: string, key: string, map: this) => void,
+        callbackfn: (value: string, key: K, map: this) => void,
         thisArg?: any
     ): void {
-        this[MEMBERS].forEach((key) => {
-            const value = this[STORAGE].get(key);
-            if (value !== null)
-                callbackfn.call(thisArg, value, this[DECODE_KEY](key), this);
-        });
+        for (const key of this.keys()) {
+            const value = this.get(key);
+            if (value) callbackfn.call(thisArg, value, key, this);
+        }
     }
 
     // 특정 키의 값 불러오기
-    get(key: string): string | null {
-        if (key) return this[STORAGE].get(this[ENCODE_KEY](key));
+    get(key: K): string | null {
+        if (key) return this[PARENT].get(key) ?? null;
         throw new TypeError(
-            "Failed to execute 'get' on 'SyncableStorage': 1 argument required, but only 0 present."
+            'HybridStorage의 get 메소드의 첫번째 인자는 문자열이어야 합니다. ' +
+                (key === undefined
+                    ? '인자가 비어있습니다.'
+                    : `여기에 해당하지 않는 타입 '${typeof key}'을(를) 사용했습니다.`)
         );
     }
 
     // 여러 키의 값 객체로 불러오기
-    getAll(keys: string[]): Record<string, string>;
-    getAll(...keys: string[]): Record<string, string>;
-    getAll(...keys: [string[]] | string[]) {
-        if (Array.isArray(keys[0])) keys = keys[0];
+    getAll<D extends Record<K, unknown>>(
+        defaults: D
+    ): { [K in keyof D]: D[K] | string };
+    getAll<T extends Iterable<K>>(keys: T): { [K in keyof T]: string | null };
+    getAll(): Record<K, string>;
+    getAll(keys: Record<K, unknown> | Iterable<K> | void) {
+        const values: Record<string, unknown> = {};
 
-        const values: Record<string, string> = {};
+        if (!keys) keys = this.keys();
 
-        (keys as string[]).forEach((key) => {
-            values[key] = this[STORAGE].get(this[ENCODE_KEY](key))!;
-        });
+        if (Symbol.iterator in keys) {
+            for (const key of keys) {
+                values[key] = this.get(key);
+            }
 
-        return values;
+            return values;
+        }
+
+        if (typeof keys === 'object') {
+            const defaults: Record<K, unknown> = keys;
+            keys = Object.keys(keys) as K[];
+
+            for (const key of keys) {
+                values[key] = this.get(key) ?? defaults[key];
+            }
+
+            return values;
+        }
+
+        throw new TypeError(
+            `HybridStorage 객체의 getAll 메소드의 첫번째 인자는 유효한 객체 및 Iterator이거나 비어 있어야 합니다. 여기에 해당하지 않는 타입 '${typeof keys}'을(를) 사용했습니다.`
+        );
     }
 
     // 특정 키의 존재여부 확인
-    has(key: string): boolean;
-    has(keys: string[]): boolean;
-    has(...keys: string[]): boolean;
-    has(...keys: string[] | [string[]]) {
-        if (Array.isArray(keys[0])) keys = keys[0];
-        else if (!keys.length)
-            throw new TypeError(
-                "Failed to execute 'hasAll' on 'SyncableStorage': 1 argument required, but only 0 present."
-            );
+    has(key: string): key is K {
+        return this.keys().has(key as any);
+    }
+    hasAll(...keys: string[]): typeof keys extends K[] ? true : false {
+        for (const key of keys) if (!this.has(key)) return false as any;
 
-        for (const key of keys as string[]) {
-            if (!this[MEMBERS].has(this[ENCODE_KEY](key))) {
-                return false;
-            }
-        }
+        return true as any;
+    }
+    hasSome<T extends string>(...keys: T[]): T & K extends never ? false : true {
+        for (const key of keys) if (this.has(key)) return true as any;
 
-        return true;
+        return false as any;
     }
 
     // 키의 값을 변경
-    set(key: string, value: string): PromiseLike<any>;
-    set(entries: Record<string, string>): PromiseLike<any>;
-    set(keys: string | Record<string, string>, value?: string) {
-        switch (typeof keys) {
-            case 'string':
-                if (typeof value === 'string') {
-                    const key = this[ENCODE_KEY](keys);
-                    this[STORAGE].set(key, value);
-                    this[MEMBERS].add(key);
-                    return this[PROMISE];
-                }
-            case 'object':
-                for (let key in keys as Record<string, string>) {
-                    const value = (keys as Record<string, string>)[key];
-                    key = this[ENCODE_KEY](key);
-                    if (typeof value === 'string') {
-                        this[STORAGE].set(key, value);
-                        this[MEMBERS].add(key);
-                    }
-                }
-                return this[PROMISE];
-            default:
-                throw new TypeError(
-                    "Failed to execute 'set' on 'SyncableStorage': 1 argument required, but only 0 present."
-                );
-        }
+    set(key: K, value: string): void;
+    set(entries: Record<K, string | null>): void;
+    set(keys: K | Record<K, string | null>, value?: string) {
+        if (typeof keys === 'string' && typeof value === 'string') {
+            this[PARENT].set(keys, value);
+            this[MEMBERS]?.add(keys);
+        } else if (typeof keys === 'object') {
+            for (const [key, value] of Object.entries(keys) as [
+                K,
+                string | null
+            ][]) {
+                if (value === null) this.delete(key);
+                else this.set(key, value);
+            }
+        } else
+            throw new TypeError(
+                "Failed to execute 'set' on 'SyncableStorage': 1 argument required, but only 0 present."
+            );
     }
     // 소속 키 목록 불러오기 (인코딩되지 않은/디코딩된 키)
-    keys(): string[] {
-        return [...this[MEMBERS]].map((key) => this[DECODE_KEY](key));
+    keys(): Set<K> {
+        if (this[MEMBERS]) return this[MEMBERS];
+        return this[PARENT].keys() as Set<K>;
     }
 
-    // 저장된 모든 키의 값을 객체로 불러오기
-    values(): Record<string, string> {
-        const values: Record<string, string> = {};
-
-        this[MEMBERS].forEach((key) => {
-            const value = this[STORAGE].get(key);
-            if (value !== null) values[this[DECODE_KEY](key)] = value;
-        });
-
-        return values;
-    }
-
-    // 키 접두어를 설정하여 하위 저장소를 만들기
-    subset(namespace: string, keyEncoder?: KeyEncoder): this {
-        if (!namespace)
-            throw new TypeError(
-                "Failed to execute 'subset' on 'SyncableStorage': 1 argument required, but only 0 present."
-            );
-        if (keyEncoder && (!keyEncoder.encoder || !keyEncoder.decoder))
-            throw new TypeError('Encoder and decoder must be included');
-        return new (this.constructor as new (
-            parent?: SyncableStorage<T>,
-            namespace?: string,
-            keyEncoder?: KeyEncoder
-        ) => this)(this, this.encodeKey(namespace), keyEncoder);
+    decorate<D extends StorageDecorator<any, any>[]>(
+        ...decorators: D &
+            DecoratorChain<NoInfer<O>, NoInfer<D>> &
+            [
+                ...ObjectDecorator<any, any>[],
+                ObjectDecorator<any, RemoteStorageOrigin<string, string>>
+            ]
+    ) {
+        return new HybridStorage(this, ...(decorators as any));
     }
 
     // 클라우드 저장소에서 최신 데이터 불러오기
-    pull(): PromiseLike<any> {
-        return this[PROMISE];
+    pull(): Promise<any> {
+        return Promise.resolve(this[PARENT].pull());
     }
 
     // 클라우드 저장소에 수정사항 저장하기
-    push(): PromiseLike<any> {
-        return this[PROMISE];
+    push(): Promise<void> {
+        return Promise.resolve(this[PARENT].push());
     }
 
-    // 키 인코딩하기 (원본 저장소상 키 이름으로 변환)
-    encodeKey(key: string): string {
-        return key;
-    }
-
-    // 키 디코딩하기 (원본 저장소상 키 이름에서 변환)
-    decodeKey(key: string): string {
-        return key;
-    }
-
-    // 키 인코딩 내부함수 (접두어+인코딩된 키)
-    protected [ENCODE_KEY](key: string): string {
-        return this[NAMESPACE] + this.encodeKey(key);
-    }
-
-    // 키 디코딩 내부함수 (접두어를 제거하고 디코딩된 키 추출)
-    protected [DECODE_KEY](key: string): string {
-        return this.decodeKey(key.slice(this[NAMESPACE].length));
-    }
-
-    // 소속 키 여부 확인 (접두어 일치 확인, [GET_MEMBERS]에서 사용)
-    protected [IS_MY_KEY](key: string): boolean {
-        return key.startsWith(this[NAMESPACE]);
-    }
-
-    // [MEMBERS] 배열 갱신 (init에서 기존 데이터를 불러올 때 활용)
-    protected [GET_MEMBERS](
-        parentMembers: Set<string> | string[] = this[STORAGE].keys()
-    ): void {
-        this[MEMBERS].clear();
-        parentMembers.forEach((key) => {
-            if (this[IS_MY_KEY](key)) this[MEMBERS].add(key);
-        });
-    }
-}
-
-// 클라우드에 업로드 불가능할 때, 로컬에 임시 저장하는 클래스
-class BackupStorage<T, U> {
-    readonly subNamespace: string; // 임시 데이터 저장소의 하위 네임스페이스
-    deviceID: string; // 기기 ID (충돌시 대처)
-    userID: string; // 사용자 ID (로그인된 사용자를 추적할 수 없도록 난수 사용)
-    unsaved: boolean; // 저장이 완료되지 않았는지 여부
-    private cryptoKeyPromise?: PromiseLike<CryptoKey>;
-    cryptoKey?: CryptoKey; // 저장소 암호화에 사용될 비밀키
-    cache?: Record<string, string>; // 임시 저장된 데이터의 사본 (세션이 종료되지 않았을 때 불필요한 암호화/복호화 방지)
-
-    constructor(
-        readonly storage: LocalStorageOrigin<T>, // 로컬 임시 저장소
-        readonly remote: RemoteStorageOrigin<U>, // 클라우드 주 저장소
-        readonly rootNamespace: string = '', // 시스템 설정을 저장하는 네임스페이스
-        subNamespace = ''
-    ) {
-        if (!(storage instanceof StorageOrigin && remote instanceof StorageOrigin))
-            throw new TypeError(
-                'Target storage should be wrapped with StorageOrigin object'
-            );
-
-        this.subNamespace = this.rootNamespace + subNamespace;
-        this.deviceID = this.getDeviceID();
-        this.userID = this.getUserID();
-        this.unsaved = this.storage.get(this.subNamespace + this.userID) !== null;
-    }
-
-    // 로컬 임시 저장소에 백업
-    async backup(data: Record<string, string>): Promise<void> {
-        data[this.rootNamespace + 'from'] = this.getFrom();
-        this.cache = data;
-        this.storage.set(this.subNamespace + this.userID, await this.encrypt(data));
-    }
-
-    // 클라우드 주 저장소에 백업 데이터 병합
-    async merge(): Promise<any> {
-        let data: Record<string, string>;
-
-        if (this.cache) data = this.cache;
-        else {
-            const cipher = this.storage.get(this.subNamespace + this.userID);
-            if (cipher) data = await this.decrypt(cipher);
-            else return;
-        }
-
-        const from = this.remote.get(this.rootNamespace + 'from');
-        if (from) {
-        } else {
-            this.remote.stage = { ...data, ...this.remote.stage };
-            return this.remote.push();
-        }
-    }
-
-    // 메타데이터와 함께 업로드
-    async push(): Promise<any> {
-        this.remote.push();
-    }
-
-    // 장치 ID 불러오기
-    protected getDeviceID(): string {
-        let id = this.storage.get(this.rootNamespace + '-id');
-        if (!id) {
-            id = crypto.randomUUID();
-            this.storage.set(this.rootNamespace + 'id', id);
-        }
-        return id;
-    }
-
-    // 주 저장소에 마지막으로 저장한 장치/시간을 나타내는 from 메타데이터 값 불러오기
-    protected getFrom(): string {
-        return this.deviceID + '/' + Date.now();
-    }
-
-    // from 메타데이터에서 장치 ID/시간 추출
-    protected static parseFrom(from: string): { deviceID: string; date: number } {
-        const [deviceID, date] = from.split('/');
-        return { deviceID, date: Number(date) };
-    }
-
-    // 바이너리를 base64 문자열로 변환
-    protected static encodeBuffer(buffer: ArrayBuffer): string {
-        return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer) as any));
-    }
-
-    // base64 문자열을 바이너리로 변환
-    protected static decodeBuffer(base64: string): ArrayBuffer {
-        return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-    }
-
-    // 저장소 암호화
-    protected async encrypt(data: Record<string, string>): Promise<string> {
-        const iv: ArrayBuffer = crypto.getRandomValues(new Uint8Array());
-        const cipher: ArrayBuffer = await crypto.subtle.encrypt(
-            {
-                name: 'AES-GCM',
-                iv,
-            },
-            await this.getCryptoKey(),
-            new TextEncoder().encode(JSON.stringify(data))
-        );
-
-        return (
-            BackupStorage.encodeBuffer(iv) + ',' + BackupStorage.encodeBuffer(cipher)
-        );
-    }
-
-    // 저장소 복호화
-    protected async decrypt(set: string): Promise<Record<string, string>> {
-        const [iv, cipher]: string[] = set.split(',');
-        return JSON.parse(
-            new TextDecoder().decode(
-                await crypto.subtle.decrypt(
-                    {
-                        name: 'AES-GCM',
-                        iv: BackupStorage.decodeBuffer(iv),
-                    },
-                    await this.getCryptoKey(),
-                    BackupStorage.decodeBuffer(cipher)
-                )
-            )
-        );
-    }
-
-    // 사용자 ID 불러오기 (서버에 없으면 생성후 저장)
-    protected getUserID(): string {
-        let id = this.remote.get(this.rootNamespace + 'id');
-        if (!id) {
-            id = crypto.randomUUID();
-            this.remote.set(this.rootNamespace + 'id', id);
-        }
-        return id;
-    }
-
-    // 비밀키 불러오기 (서버에 없으면 생성후 저장)
-    protected getCryptoKey(): PromiseLike<CryptoKey> | CryptoKey {
-        if (this.cryptoKey) return this.cryptoKey;
-
-        if (!this.cryptoKeyPromise) {
-            const cryptoKeyStr = this.remote.get(this.rootNamespace + 'cryptokey');
-            if (cryptoKeyStr) {
-                this.cryptoKeyPromise = BackupStorage.importCryptoKey(cryptoKeyStr);
-            } else {
-                this.cryptoKeyPromise = BackupStorage.generateCryptoKey();
-                this.cryptoKeyPromise
-                    .then((key) => BackupStorage.exportCryptoKey(key))
-                    .then((key) => {
-                        this.remote.set(this.rootNamespace + 'cryptokey', key);
-                    });
-            }
-        }
-
-        this.cryptoKeyPromise.then((key) => {
-            this.cryptoKey = key;
-        });
-
-        return this.cryptoKeyPromise;
-    }
-
-    // 비밀키 생성
-    protected static generateCryptoKey(): PromiseLike<CryptoKey> {
-        return crypto.subtle.generateKey(
-            {
-                name: 'AES-GCM',
-                length: 128,
-            },
-            true,
-            ['encrypt', 'decrypt']
-        );
-    }
-
-    // 비밀키 문자열로 내보내기
-    protected static async exportCryptoKey(key: CryptoKey): Promise<string> {
-        return JSON.stringify(await crypto.subtle.exportKey('jwk', key));
-    }
-
-    // 비밀키 불러오기
-    protected static importCryptoKey(key: string): PromiseLike<CryptoKey> {
-        return crypto.subtle.importKey(
-            'jwk',
-            JSON.parse(key),
-            { name: 'AES-GCM' },
-            false,
-            ['encrypt', 'decrypt']
-        );
+    sync(): Promise<any> {
+        return Promise.all([this.pull(), this.push()]);
     }
 }

@@ -1,3 +1,3 @@
-import { SyncableStorage } from './common';
-declare const _default: SyncableStorage<mw.Map<any>>;
+import { HybridStorage } from './common';
+declare const _default: HybridStorage<mw.Map>;
 export = _default;
