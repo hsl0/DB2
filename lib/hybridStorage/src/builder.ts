@@ -38,14 +38,16 @@ export interface RemoteStorageOriginPart extends RemoteStorageOriginSkeletonPart
     pull(): Promise<void>;
 }
 
-type RemoteStorageOrigin<K extends string | number, V> = RemoteStorageOriginPart &
-    StorageOrigin<K, V>;
+export type RemoteStorageOrigin<
+    K extends string | number,
+    V
+> = RemoteStorageOriginPart & StorageOrigin<K, V>;
 
-type ObjectDecorator<O, R> = (origin: O) => R;
+export type ObjectDecorator<O, R> = (origin: O) => R;
 type SameTypeDecorator<T> = ObjectDecorator<T, T>;
 type UnionTypeDecorator<O, R> = ObjectDecorator<O, O & R>;
 
-type StorageDecorator<
+export type StorageDecorator<
     O extends StorageOriginSkeleton,
     R extends StorageOriginSkeleton = O
 > = ObjectDecorator<O, R>;
@@ -56,7 +58,7 @@ type DecoratorChain<H, A extends ObjectDecorator<any, any>[]> = A extends [
 ]
     ? D extends ObjectDecorator<any, any>
         ? [
-              ObjectDecorator<H, any> extends D ? D : never,
+              ObjectDecorator<H, any> extends D ? D : unknown,
               ...(N extends ObjectDecorator<any, any>[]
                   ? DecoratorChain<
                         SameTypeDecorator<H> extends D
@@ -66,14 +68,14 @@ type DecoratorChain<H, A extends ObjectDecorator<any, any>[]> = A extends [
                             : ReturnType<D>,
                         N
                     >
-                  : never)
+                  : [])
           ]
-        : never
+        : unknown
     : A extends []
     ? A
     : never;
 
-type RemoteStorageDecorator<
+export type RemoteStorageDecorator<
     O extends RemoteStorageOriginSkeleton,
     R extends RemoteStorageOriginSkeleton = O
 > = StorageDecorator<O, R>;
@@ -90,12 +92,12 @@ function bindMethods<T>(obj: T, context: T = obj): T {
     return copied as T;
 }
 
-function decorate<O, R>(origin: O, ...decorators: [ObjectDecorator<O, R>]): R;
-function decorate<O, R, I1>(
+export function decorate<O, R>(origin: O, ...decorators: [ObjectDecorator<O, R>]): R;
+export function decorate<O, R, I1>(
     origin: O,
     ...decorators: [ObjectDecorator<O, I1>, ObjectDecorator<I1, R>]
 ): R;
-function decorate<O, R, I1, I2>(
+export function decorate<O, R, I1, I2>(
     origin: O,
     ...decorators: [
         ObjectDecorator<O, I1>,
@@ -103,7 +105,7 @@ function decorate<O, R, I1, I2>(
         ObjectDecorator<I2, R>
     ]
 ): R;
-function decorate<O, R, I1, I2, I3>(
+export function decorate<O, R, I1, I2, I3>(
     origin: O,
     ...decorators: [
         ObjectDecorator<O, I1>,
@@ -112,7 +114,7 @@ function decorate<O, R, I1, I2, I3>(
         ObjectDecorator<I3, R>
     ]
 ): R;
-function decorate<O, R, I1, I2, I3, I4>(
+export function decorate<O, R, I1, I2, I3, I4>(
     origin: O,
     ...decorators: [
         ObjectDecorator<O, I1>,
@@ -122,7 +124,7 @@ function decorate<O, R, I1, I2, I3, I4>(
         ObjectDecorator<I4, R>
     ]
 ): R;
-function decorate<O, R, I1, I2, I3, I4, I5>(
+export function decorate<O, R, I1, I2, I3, I4, I5>(
     origin: O,
     ...decorators: [
         ObjectDecorator<O, I1>,
@@ -133,7 +135,7 @@ function decorate<O, R, I1, I2, I3, I4, I5>(
         ObjectDecorator<I5, R>
     ]
 ): R;
-function decorate<O, R, I1, I2, I3, I4, I5, I6>(
+export function decorate<O, R, I1, I2, I3, I4, I5, I6>(
     origin: O,
     ...decorators: [
         ObjectDecorator<O, I1>,
@@ -145,7 +147,7 @@ function decorate<O, R, I1, I2, I3, I4, I5, I6>(
         ObjectDecorator<I6, R>
     ]
 ): R;
-function decorate<O, R, I1, I2, I3, I4, I5, I6, I7>(
+export function decorate<O, R, I1, I2, I3, I4, I5, I6, I7>(
     origin: O,
     ...decorators: [
         ObjectDecorator<O, I1>,
@@ -158,7 +160,7 @@ function decorate<O, R, I1, I2, I3, I4, I5, I6, I7>(
         ObjectDecorator<I7, R>
     ]
 ): R;
-function decorate<O, R, I1, I2, I3, I4, I5, I6, I7, I8>(
+export function decorate<O, R, I1, I2, I3, I4, I5, I6, I7, I8>(
     origin: O,
     ...decorators: [
         ObjectDecorator<O, I1>,
@@ -172,7 +174,7 @@ function decorate<O, R, I1, I2, I3, I4, I5, I6, I7, I8>(
         ObjectDecorator<I8, R>
     ]
 ): R;
-function decorate<O, R, I1, I2, I3, I4, I5, I6, I7, I8, I9>(
+export function decorate<O, R, I1, I2, I3, I4, I5, I6, I7, I8, I9>(
     origin: O,
     ...decorators: [
         ObjectDecorator<O, I1>,
@@ -187,13 +189,13 @@ function decorate<O, R, I1, I2, I3, I4, I5, I6, I7, I8, I9>(
         ObjectDecorator<I9, R>
     ]
 ): R;
-function decorate<O, R, D extends ObjectDecorator<any, any>[]>(
+export function decorate<O, R, D extends ObjectDecorator<any, any>[]>(
     origin: O,
     ...decorators: D &
         DecoratorChain<NoInfer<O>, NoInfer<D>> &
         ([...ObjectDecorator<any, any>[], ObjectDecorator<any, R>] | [])
 ): R;
-function decorate<O, R, D extends ObjectDecorator<any, any>[]>(
+export function decorate<O, R, D extends ObjectDecorator<any, any>[]>(
     origin: O,
     ...decorators: D &
         DecoratorChain<NoInfer<O>, NoInfer<D>> &
@@ -219,18 +221,20 @@ const recordOrigin = <K extends Key, V>(record: Record<K, V>) =>
             delete record[key];
         },
     } satisfies StorageOrigin<K, V>);
-export interface RemoteStageInit {
-    initialState?: Record<string, string>;
+export interface RemoteStageInit<K extends string | number, V> {
+    initialState?: Record<K, V>;
 
-    push(changed: Record<string, string>, removed: Set<string>): Promise<void>;
-    pull(): Promise<Record<string, string>>;
+    push(changed: Record<K, V>, removed: Set<K>): Promise<void>;
+    pull(): Promise<Record<K, V>>;
 
     onPush?: (promise: Promise<void>) => void;
-    onPull?: (promise: Promise<Record<string, string>>) => void;
+    onPull?: (promise: Promise<Record<K, V>>) => void;
 }
-export const remoteStage = (init: RemoteStageInit) => {
-    let state = recordOrigin(init.initialState ?? {});
-    let changedKeys = new Set<string>();
+export const remoteStage = <K extends string | number, V>(
+    init: RemoteStageInit<K, V>
+) => {
+    let state = recordOrigin(init.initialState ?? ({} as Record<K, V>));
+    let changedKeys = new Set<K>();
 
     return {
         keys: state.keys,
@@ -255,7 +259,7 @@ export const remoteStage = (init: RemoteStageInit) => {
                         else delete newState[key];
                     }
 
-                    state = recordOrigin<string, string>(newState);
+                    state = recordOrigin<K, V>(newState);
 
                     return newState;
                 });
@@ -271,17 +275,19 @@ export const remoteStage = (init: RemoteStageInit) => {
                         .union(state.keys())
                         .values()
                         .map((key) => [key, state.get(key)!])
-                );
+                ) as Record<K, V>;
                 const removed = oldChangedKeys.difference(state.keys());
                 return init.push(changed, removed);
             });
             init.onPush?.(waitingPush);
             return waitingPush;
         },
-    } satisfies RemoteStorageOrigin<string, string>;
+    } satisfies RemoteStorageOrigin<K, V>;
 };
 
-const cacheSyncPromise = <O extends RemoteStorageOriginPart>(storage: O): O => {
+export const cacheSyncPromise = <O extends RemoteStorageOriginPart>(
+    storage: O
+): O => {
     let pushPromise: Promise<void> | null = null;
     let pullPromise: Promise<void> | null = null;
 
@@ -305,35 +311,33 @@ const cacheSyncPromise = <O extends RemoteStorageOriginPart>(storage: O): O => {
     };
 };
 
-const dummyRemoteDecorator = <O>(local: O) =>
+export const dummyRemoteDecorator = <O>(local: O) =>
     ({
         ...local,
         push: () => Promise.resolve(),
         pull: () => Promise.resolve(),
     } satisfies O & RemoteStorageOriginSkeletonPart);
 
-interface BackupUploadsInit {
+interface BackupUploadsInit<K extends string, V> {
     backupStorage: StorageOrigin<string, string>;
     prefix: string;
     profile: string;
     merger?: (
-        local: Record<string, string | null>,
-        remote: Record<string, string | null>
-    ) => Record<string, string | null>;
-
-    onConflict?(
-        local: Record<string, string>,
-        remote: Record<string, string>
-    ): Promise<Record<string, string>>;
+        local: Record<K, V | null>,
+        remote: Record<K, V | null>
+    ) => Record<K, V | null>;
 }
 
 const backupUploads =
-    ({ backupStorage, prefix, profile, merger }: BackupUploadsInit) =>
-    (
-        origin: RemoteStorageOrigin<string, string>
-    ): RemoteStorageOrigin<string, string> => {
+    <K extends string, V>({
+        backupStorage,
+        prefix,
+        profile,
+        merger,
+    }: BackupUploadsInit<K, V>) =>
+    (origin: RemoteStorageOrigin<K, V>): RemoteStorageOrigin<K, V> => {
         backupStorage = decorate(backupStorage, storagePrefixer(prefix));
-        let changedKeys = new Set<string>();
+        let changedKeys = new Set<K>();
 
         function merge() {
             if (!merger) return;
@@ -343,16 +347,16 @@ const backupUploads =
             if (new Set(saved.keys()).size < 0) return;
 
             const latest = Math.max(...[...saved.keys()].map((key) => Number(key)));
-            const stage: Record<string, string | null> = JSON.parse(
+            const stage: Record<K, V | null> = JSON.parse(
                 saved.get(String(latest))!
             );
 
-            const remote: Record<string, string | null> = Object.fromEntries(
+            const remote = Object.fromEntries(
                 [...origin.keys()].map((key) => [key, origin.get(key) ?? null])
-            );
+            ) as Record<K, V | null>;
 
-            const merged: Record<string, string | null> = merger(stage, remote);
-            for (const [key, value] of Object.entries(merged)) {
+            const merged: Record<K, V | null> = merger(stage, remote);
+            for (const [key, value] of Object.entries(merged) as [K, V][]) {
                 if (value) origin.set(key, value);
                 else origin.delete(key);
             }
@@ -416,17 +420,12 @@ export const storageEncoder =
 export const storagePrefixer =
     <P extends string>(prefix: P) =>
     <
-        K extends O extends StorageOrigin<infer S, string>
-            ? string extends S
-                ? string
-                : Extract<S, `${P}${string}`> extends `${P}${infer K}`
-                ? K
-                : never
-            : never,
-        O extends StorageOrigin<string, string>
+        K extends string,
+        V extends O extends StorageOrigin<string, infer V> ? V : never,
+        O extends StorageOrigin<`${P}${K}` | string, any>
     >(
         storage: O
-    ): StorageOrigin<K, string> & Omit<O, keyof StorageOrigin<string, string>> => ({
+    ): StorageOrigin<K, V> & Omit<O, keyof StorageOrigin<K, V>> => ({
         ...storage,
         keys: () =>
             new Set(
@@ -436,9 +435,9 @@ export const storagePrefixer =
                     .filter((key): key is `${P}${K}` => key.startsWith(prefix))
                     .map((key) => key.slice(prefix.length) as K)
             ),
-        get: (key) => storage.get(prefix + key),
-        set: (key, value) => storage.set(prefix + key, value),
-        delete: (key) => storage.delete(prefix + key),
+        get: (key) => storage.get((prefix + key) as `${P}${K}`),
+        set: (key, value) => storage.set((prefix + key) as `${P}${K}`, value),
+        delete: (key) => storage.delete((prefix + key) as `${P}${K}`),
     });
 
 // web Storage API 추상화
