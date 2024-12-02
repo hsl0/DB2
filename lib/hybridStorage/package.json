@@ -22,7 +22,7 @@
   "homepage": "https://github.com/hsl0/libertygame-DB2#readme",
   "devDependencies": {
     "@types/mediawiki": "npm:types-mediawiki@^1.2.0",
-    "rollup": "^2.79.2",
+    "rollup": "^4.28.0",
     "rollup-plugin-cleanup": "^3.2.1",
     "rollup-plugin-typescript2": "^0.36.0",
     "rollup-plugin-not-microsoft": "github:hsl0/rollup-plugin-not-microsoft"
