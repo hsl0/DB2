@@ -1,5 +1,5 @@
 import {
-    HybridStorage,
+    RemoteStorageHelper,
     webStorageOrigin,
     remoteStage,
     storagePrefixer,
@@ -12,8 +12,11 @@ import {
 const api = new mw.Api();
 
 export = mw.user.isAnon()
-    ? new HybridStorage(webStorageOrigin(localStorage), dummyRemoteDecorator)
-    : new HybridStorage(
+    ? /* 익명 사용자 로컬 스토리지 */ new RemoteStorageHelper(
+          webStorageOrigin(localStorage),
+          dummyRemoteDecorator
+      )
+    : /* 로그인 사용자 옵션 저장소(서버)+로컬 백업 */ new RemoteStorageHelper(
           remoteStage<string, string>({
               //@ts-ignore 강제로 덮어쓰기
               initialState: mw.user.options.values,

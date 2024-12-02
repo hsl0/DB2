@@ -325,7 +325,7 @@ interface BackupUploadsInit<K extends string, V> {
     ) => Record<K, V | null>;
 }
 
-const backupUploads =
+export const backupUploads =
     <K extends string, V>({
         backupStorage,
         prefix,
@@ -450,12 +450,12 @@ export const webStorageOrigin = (
 export const localStorageOrigin = webStorageOrigin(localStorage);
 
 // 온라인/오프라인 공통 저장소 클래스
-export class HybridStorage<
-    O extends Partial<RemoteStorageOrigin<string, string>>,
+export class StorageHelper<
+    O extends Partial<StorageOrigin<any, any>>,
     D extends StorageDecorator<any, any>[],
-    P extends RemoteStorageOrigin<string, string>,
-    K extends P extends RemoteStorageOrigin<infer K, string> ? K : never
-> implements RemoteStorageOrigin<string, string>
+    P extends StorageOrigin<K, string>,
+    K extends string | number
+> implements StorageOrigin<K, string>
 {
     protected readonly [PARENT]: P; // 원본이 저장되는 저장소
     protected [MEMBERS]?: Set<K>;
@@ -466,8 +466,8 @@ export class HybridStorage<
             DecoratorChain<NoInfer<O>, NoInfer<D>> &
             (
                 | [
-                      ...ObjectDecorator<any, any>[],
-                      ObjectDecorator<any, RemoteStorageOrigin<string, string>>
+                      ...StorageDecorator<any, any>[],
+                      StorageDecorator<any, StorageOrigin<K, string>>
                   ]
                 | []
             )
@@ -475,10 +475,10 @@ export class HybridStorage<
         this[PARENT] = decorate(parent, ...(decorators as any));
     }
 
-    static decorator<O extends Partial<RemoteStorageOrigin<string, string>>>(
+    static decorator<O extends Partial<StorageOrigin<string | number, string>>>(
         parent: O
     ) {
-        return new HybridStorage(parent);
+        return new StorageHelper(parent);
     }
 
     // 소속 키의 수
@@ -528,10 +528,10 @@ export class HybridStorage<
     getAll<D extends Record<K, unknown>>(
         defaults: D
     ): { [K in keyof D]: D[K] | string };
-    getAll<T extends Iterable<K>>(keys: T): { [K in keyof T]: string | null };
+    getAll<T extends K>(keys: Iterable<T>): Record<T, string | null>;
     getAll(): Record<K, string>;
     getAll(keys: Record<K, unknown> | Iterable<K> | void) {
-        const values: Record<string, unknown> = {};
+        const values = {} as Record<K, unknown>;
 
         if (!keys) keys = this.keys();
 
@@ -560,15 +560,17 @@ export class HybridStorage<
     }
 
     // 특정 키의 존재여부 확인
-    has(key: string): key is K {
+    has(key: string | number): key is K {
         return this.keys().has(key as any);
     }
-    hasAll(...keys: string[]): typeof keys extends K[] ? true : false {
+    hasAll(...keys: (string | number)[]): typeof keys extends K[] ? true : false {
         for (const key of keys) if (!this.has(key)) return false as any;
 
         return true as any;
     }
-    hasSome<T extends string>(...keys: T[]): T & K extends never ? false : true {
+    hasSome<T extends string | number>(
+        ...keys: T[]
+    ): T & K extends never ? false : true {
         for (const key of keys) if (this.has(key)) return true as any;
 
         return false as any;
@@ -604,11 +606,42 @@ export class HybridStorage<
         ...decorators: D &
             DecoratorChain<NoInfer<O>, NoInfer<D>> &
             [
-                ...ObjectDecorator<any, any>[],
-                ObjectDecorator<any, RemoteStorageOrigin<string, string>>
+                ...StorageDecorator<any, any>[],
+                StorageDecorator<any, StorageOrigin<string | number, string>>
             ]
     ) {
-        return new HybridStorage(this, ...(decorators as any));
+        return new StorageHelper(this, ...(decorators as any));
+    }
+}
+
+export class RemoteStorageHelper<
+        O extends Partial<RemoteStorageOrigin<any, any>>,
+        D extends RemoteStorageDecorator<any, any>[],
+        P extends RemoteStorageOrigin<K, string>,
+        K extends string | number
+    >
+    extends StorageHelper<O, D, P, K>
+    implements RemoteStorageOrigin<K, string>
+{
+    constructor(
+        parent: O,
+        ...decorators: D &
+            DecoratorChain<NoInfer<O>, NoInfer<D>> &
+            (
+                | [
+                      ...RemoteStorageDecorator<any, any>[],
+                      RemoteStorageDecorator<any, RemoteStorageOrigin<K, string>>
+                  ]
+                | []
+            )
+    ) {
+        super(parent, ...(decorators as any));
+    }
+
+    static decorator<
+        O extends Partial<RemoteStorageOrigin<string | number, string>>
+    >(parent: O) {
+        return new RemoteStorageHelper(parent);
     }
 
     // 클라우드 저장소에서 최신 데이터 불러오기
@@ -623,5 +656,19 @@ export class HybridStorage<
 
     sync(): Promise<any> {
         return Promise.all([this.pull(), this.push()]);
+    }
+
+    decorate<D extends RemoteStorageDecorator<any, any>[]>(
+        ...decorators: D &
+            DecoratorChain<NoInfer<O>, NoInfer<D>> &
+            [
+                ...RemoteStorageDecorator<any, any>[],
+                RemoteStorageDecorator<
+                    any,
+                    RemoteStorageOrigin<string | number, string>
+                >
+            ]
+    ) {
+        return new RemoteStorageHelper(this, ...(decorators as any));
     }
 }

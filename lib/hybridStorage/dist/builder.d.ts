@@ -33,7 +33,7 @@ type DecoratorChain<H, A extends ObjectDecorator<any, any>[]> = A extends [
 ] ? D extends ObjectDecorator<any, any> ? [
     ObjectDecorator<H, any> extends D ? D : unknown,
     ...(N extends ObjectDecorator<any, any>[] ? DecoratorChain<SameTypeDecorator<H> extends D ? H : UnionTypeDecorator<H, unknown> extends D ? H & ReturnType<D> : ReturnType<D>, N> : [])
-] : unknown : A extends [] ? A : never;
+] : never : A extends [] ? A : never;
 export type RemoteStorageDecorator<O extends RemoteStorageOriginSkeleton, R extends RemoteStorageOriginSkeleton = O> = StorageDecorator<O, R>;
 export declare function decorate<O, R>(origin: O, ...decorators: [ObjectDecorator<O, R>]): R;
 export declare function decorate<O, R, I1>(origin: O, ...decorators: [ObjectDecorator<O, I1>, ObjectDecorator<I1, R>]): R;
@@ -126,6 +126,13 @@ export declare const dummyRemoteDecorator: <O>(local: O) => O & {
     push: () => Promise<void>;
     pull: () => Promise<void>;
 };
+interface BackupUploadsInit<K extends string, V> {
+    backupStorage: StorageOrigin<string, string>;
+    prefix: string;
+    profile: string;
+    merger?: (local: Record<K, V | null>, remote: Record<K, V | null>) => Record<K, V | null>;
+}
+export declare const backupUploads: <K extends string, V>({ backupStorage, prefix, profile, merger, }: BackupUploadsInit<K, V>) => (origin: RemoteStorageOrigin<K, V>) => RemoteStorageOrigin<K, V>;
 export interface StorageEncoderInit<E extends string, D extends string> {
     encodeKey: (key: D) => E;
     decodeKey: (key: E) => D;
@@ -134,14 +141,14 @@ export declare const storageEncoder: <E extends string, D extends string>({ enco
 export declare const storagePrefixer: <P extends string>(prefix: P) => <K extends string, V extends O extends StorageOrigin<string, infer V_1> ? V_1 : never, O extends StorageOrigin<`${P}${K}` | string, any>>(storage: O) => StorageOrigin<K, V> & Omit<O, keyof StorageOrigin<K, V>>;
 export declare const webStorageOrigin: (storage: Storage) => StorageOrigin<string, string>;
 export declare const localStorageOrigin: StorageOrigin<string, string>;
-export declare class HybridStorage<O extends Partial<RemoteStorageOrigin<string, string>>, D extends StorageDecorator<any, any>[], P extends RemoteStorageOrigin<string, string>, K extends P extends RemoteStorageOrigin<infer K, string> ? K : never> implements RemoteStorageOrigin<string, string> {
+export declare class StorageHelper<O extends Partial<StorageOrigin<any, any>>, D extends StorageDecorator<any, any>[], P extends StorageOrigin<K, string>, K extends string | number> implements StorageOrigin<K, string> {
     protected readonly [PARENT]: P;
     protected [MEMBERS]?: Set<K>;
     constructor(parent: O, ...decorators: D & DecoratorChain<NoInfer<O>, NoInfer<D>> & ([
-        ...ObjectDecorator<any, any>[],
-        ObjectDecorator<any, RemoteStorageOrigin<string, string>>
+        ...StorageDecorator<any, any>[],
+        StorageDecorator<any, StorageOrigin<K, string>>
     ] | []));
-    static decorator<O extends Partial<RemoteStorageOrigin<string, string>>>(parent: O): HybridStorage<O, [], RemoteStorageOrigin<string, string>, string>;
+    static decorator<O extends Partial<StorageOrigin<string | number, string>>>(parent: O): StorageHelper<O, [], StorageOrigin<string | number, string>, string | number>;
     get size(): number;
     clear(): void;
     delete(...keys: K[]): void;
@@ -150,22 +157,31 @@ export declare class HybridStorage<O extends Partial<RemoteStorageOrigin<string,
     getAll<D extends Record<K, unknown>>(defaults: D): {
         [K in keyof D]: D[K] | string;
     };
-    getAll<T extends Iterable<K>>(keys: T): {
-        [K in keyof T]: string | null;
-    };
+    getAll<T extends K>(keys: Iterable<T>): Record<T, string | null>;
     getAll(): Record<K, string>;
-    has(key: string): key is K;
-    hasAll(...keys: string[]): typeof keys extends K[] ? true : false;
-    hasSome<T extends string>(...keys: T[]): T & K extends never ? false : true;
+    has(key: string | number): key is K;
+    hasAll(...keys: (string | number)[]): typeof keys extends K[] ? true : false;
+    hasSome<T extends string | number>(...keys: T[]): T & K extends never ? false : true;
     set(key: K, value: string): void;
     set(entries: Record<K, string | null>): void;
     keys(): Set<K>;
     decorate<D extends StorageDecorator<any, any>[]>(...decorators: D & DecoratorChain<NoInfer<O>, NoInfer<D>> & [
-        ...ObjectDecorator<any, any>[],
-        ObjectDecorator<any, RemoteStorageOrigin<string, string>>
-    ]): HybridStorage<this, any, RemoteStorageOrigin<string, string>, string>;
+        ...StorageDecorator<any, any>[],
+        StorageDecorator<any, StorageOrigin<string | number, string>>
+    ]): StorageHelper<this, any, StorageOrigin<string | number, string>, string | number>;
+}
+export declare class RemoteStorageHelper<O extends Partial<RemoteStorageOrigin<any, any>>, D extends RemoteStorageDecorator<any, any>[], P extends RemoteStorageOrigin<K, string>, K extends string | number> extends StorageHelper<O, D, P, K> implements RemoteStorageOrigin<K, string> {
+    constructor(parent: O, ...decorators: D & DecoratorChain<NoInfer<O>, NoInfer<D>> & ([
+        ...RemoteStorageDecorator<any, any>[],
+        RemoteStorageDecorator<any, RemoteStorageOrigin<K, string>>
+    ] | []));
+    static decorator<O extends Partial<RemoteStorageOrigin<string | number, string>>>(parent: O): RemoteStorageHelper<O, [], RemoteStorageOrigin<string | number, string>, string | number>;
     pull(): Promise<any>;
     push(): Promise<void>;
     sync(): Promise<any>;
+    decorate<D extends RemoteStorageDecorator<any, any>[]>(...decorators: D & DecoratorChain<NoInfer<O>, NoInfer<D>> & [
+        ...RemoteStorageDecorator<any, any>[],
+        RemoteStorageDecorator<any, RemoteStorageOrigin<string | number, string>>
+    ]): RemoteStorageHelper<this, any, RemoteStorageOrigin<string | number, string>, string | number>;
 }
 export {};
