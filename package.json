@@ -1,5 +1,5 @@
 {
-  "name": "db2",
+  "name": "@libertygame/db2",
   "version": "2.0.0-alpha.0",
   "description": "새로운 DB 생성형 게임의 작동에 필요합니다.",
   "type": "module",
@@ -11,16 +11,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hsl0/libertygame-DB2.git"
+    "url": "git+https://github.com/hsl0/DB2.git"
   },
   "author": "hsl0",
   "license": "CC-BY-NC-SA-4.0",
   "bugs": {
-    "url": "https://github.com/hsl0/libertygame-DB2/issues"
+    "url": "https://github.com/hsl0/DB2/issues"
   },
-  "homepage": "https://github.com/hsl0/libertygame-DB2#readme",
+  "homepage": "https://github.com/hsl0/DB2#readme",
   "devDependencies": {
-    "libertygame-types": "github:hsl0/libertygame-types",
+    "@libertygame/types": "^0.5.2",
     "typescript": "^5.7.2"
   },
   "workspaces": [

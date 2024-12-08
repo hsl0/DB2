@@ -1,5 +1,5 @@
 {
-    "extends": "libertygame-types/recommended.json",
+    "extends": "@libertygame/types/recommended.json",
     "compilerOptions": {
         "strict": true,
         "noUnusedLocals": true,
@@ -22,7 +22,7 @@
     },
     "include": [
         "src/**/*",
-        "node_modules/libertygame-types"
+        "node_modules/@libertygame/types"
     ],
     "references": [
         {

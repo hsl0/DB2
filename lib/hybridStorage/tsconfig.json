@@ -1,5 +1,5 @@
 {
-    "extends": "libertygame-types/recommended.json",
+    "extends": "@libertygame/types/recommended.json",
     "compilerOptions": {
         "noUnusedLocals": true,
         "noUnusedParameters": true,
