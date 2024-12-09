@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/hsl0/DB2#readme",
   "devDependencies": {
-    "@libertygame/types": "^0.5.2",
+    "@libertygame/types": "^0.6.0",
     "typescript": "^5.7.2"
   },
   "workspaces": [
